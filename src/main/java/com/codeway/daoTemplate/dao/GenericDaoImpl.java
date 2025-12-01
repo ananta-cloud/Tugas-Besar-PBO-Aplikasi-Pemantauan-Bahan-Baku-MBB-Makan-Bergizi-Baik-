@@ -273,28 +273,28 @@ public abstract class GenericDaoImpl<Pk extends Serializable, Entity>{
 			return val.toString();
 		else return val;
 	}
-	private void setFieldValue(Entity e, Field f, Object val) throws Exception{
-		String fName  = f.getName(); 
-		if(val ==null) return;
-		
-//		TemplateLogger.info(fName+" type : "+f.getType()+" , db value type : "+val.getClass());
-		
-		Method m = type.getMethod("set"+ fName.substring(0, 1).toUpperCase() + fName.substring(1), f.getType());
-		
-		if(f.getType().isEnum() && val instanceof String){
-			val = f.getType().getMethod("valueOf", String.class).invoke(null, val);
-			TemplateLogger.debug("setting enum value "+val);
-			m.invoke(e, val);
-		}
-		else if(f.getType().equals(Boolean.class) && val instanceof Number)
-			m.invoke(e, ((int)val) >0 );
-		else if(f.getType().equals(Integer.class) && val instanceof Long)
-			m.invoke(e, ((Long)val).intValue());
-		else if(f.getType().equals(Long.class) && val instanceof Integer){
-			m.invoke(e, (int)val+0l);
-		}
-		else
-			m.invoke(e, val);
-	}
+    private void setFieldValue(Entity e, Field f, Object val) throws Exception{
+        String fName  = f.getName();
+        if(val ==null) return;
+
+        Method m = type.getMethod("set"+ fName.substring(0, 1).toUpperCase() + fName.substring(1), f.getType());
+
+        if(f.getType().isEnum() && val instanceof String){
+            val = f.getType().getMethod("valueOf", String.class).invoke(null, val);
+            m.invoke(e, val);
+        }
+        else if(f.getType().equals(Boolean.class) && val instanceof Number)
+            m.invoke(e, ((int)val) >0 );
+        else if(f.getType().equals(Integer.class) && val instanceof Number) // Handle Number generic (Long/BigInt/Int)
+            m.invoke(e, ((Number)val).intValue());
+        else if(f.getType().equals(Long.class) && val instanceof Number){ // Handle Number generic
+            m.invoke(e, ((Number)val).longValue());
+        }
+        else if(f.getType().equals(String.class) && !(val instanceof String)) { // Paksa jadi String jika field target adalah String
+            m.invoke(e, val.toString());
+        }
+        else
+            m.invoke(e, val);
+    }
 	
 }

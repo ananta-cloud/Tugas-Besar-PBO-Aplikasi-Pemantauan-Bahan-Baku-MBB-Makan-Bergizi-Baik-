@@ -42,24 +42,34 @@ public class TemplateConfiguration{
 			return false;
 		}
 	}
-	
-	public static void loadProperties() throws Exception{
 
-		map = new HashMap<>();
-		InputStream is = TemplateConfiguration.class.getClassLoader().getResourceAsStream("template-dao.properties");
-		
-		if(is == null){
-			throw new Exception("template-dao.properties file not found in class path");
-		}
-		BufferedReader br = new BufferedReader(new InputStreamReader(is));
-		String line =null;
-		while( (line=br.readLine()) !=null){
-//			System.out.println(line);
-			if(line.trim().isEmpty() || !line.contains("=")) continue;
-			
-			String[] parts = line.split("=");
-			map.put(parts[0].trim(), parts[1].trim());
-		}
-	}
+    public static void loadProperties() throws Exception {
+        map = new HashMap<>();
+        InputStream is = TemplateConfiguration.class.getClassLoader().getResourceAsStream("template-dao.properties");
+
+        if (is == null) {
+            throw new Exception("template-dao.properties file not found in class path");
+        }
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        String line = null;
+        while ((line = br.readLine()) != null) {
+            // Skip baris kosong atau tanpa tanda sama dengan
+            if (line.trim().isEmpty() || !line.contains("=")) continue;
+
+            // Gunakan limit 2 agar split hanya membagi di "=" pertama
+            String[] parts = line.split("=", 2);
+
+            String key = parts[0].trim();
+            String value = "";
+
+            // Cek apakah ada value setelah "="
+            if (parts.length > 1) {
+                value = parts[1].trim();
+            }
+
+            map.put(key, value);
+        }
+    }
 	
 }
