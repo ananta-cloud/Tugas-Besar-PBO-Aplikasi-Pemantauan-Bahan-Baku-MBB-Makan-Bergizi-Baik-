@@ -1,5 +1,36 @@
 package com.mbg.gui.dapur;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.Timer;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.table.DefaultTableModel;
+
 import com.mbg.dao.BahanBakuDao;
 import com.mbg.dao.PermintaanDao;
 import com.mbg.dao.PermintaanDetailDao;
@@ -8,15 +39,6 @@ import com.mbg.model.Permintaan;
 import com.mbg.model.PermintaanDetail;
 import com.mbg.model.User;
 
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.sql.Date;
-import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-
 public class dapur extends JFrame {
 
     private User loggedInUser;
@@ -24,8 +46,15 @@ public class dapur extends JFrame {
     private PermintaanDao permintaanDao;
     private PermintaanDetailDao detailDao;
 
-    private JTable tableStok;
-    private DefaultTableModel modelStok;
+    // Dashboard Components
+    private JTable tablePesanan;
+    private DefaultTableModel modelPesanan;
+    private JComboBox<String> cmbFilterStatus;
+    private JTextField txtSearch;
+    private List<Permintaan> allPesanan;
+    private int expandedRow = -1;
+
+    // Input Pesanan Components
     private JTextField txtMenuMasakan;
     private JTextField txtJumlahPorsi;
     private JComboBox<BahanBakuItem> cmbBahanBaku;
@@ -34,56 +63,320 @@ public class dapur extends JFrame {
     private DefaultTableModel modelKeranjang;
     private List<PermintaanDetail> keranjangPermintaan;
 
+    // Auto-refresh timer
+    private Timer refreshTimer;
+
     public dapur(User user) {
         this.loggedInUser = user;
-
-        // Inisialisasi DAO
         this.bahanDao = new BahanBakuDao();
         this.permintaanDao = new PermintaanDao();
         this.detailDao = new PermintaanDetailDao();
         this.keranjangPermintaan = new ArrayList<>();
+        this.allPesanan = new ArrayList<>();
 
         initComponents();
-        loadDataStok();
-        loadDataBahanCombo();
+        startAutoRefresh();
     }
 
     private void initComponents() {
         setTitle("Aplikasi Dapur - " + (loggedInUser != null ? loggedInUser.getName() : "User"));
-        setSize(900, 600);
+        setSize(1000, 650);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+
         JTabbedPane tabbedPane = new JTabbedPane();
-        JPanel panelStok = new JPanel(new BorderLayout(10, 10));
-        panelStok.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        JLabel lblTitleStok = new JLabel("Stok Bahan Baku Tersedia");
-        lblTitleStok.setFont(new Font("SansSerif", Font.BOLD, 18));
-        panelStok.add(lblTitleStok, BorderLayout.NORTH);
-        String[] colStok = {"ID", "Nama Bahan", "Kategori", "Jumlah", "Satuan", "Status", "Kadaluarsa"};
-        modelStok = new DefaultTableModel(colStok, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; // Tabel tidak bisa diedit langsung
-            }
-        };
-        tableStok = new JTable(modelStok);
-        panelStok.add(new JScrollPane(tableStok), BorderLayout.CENTER);
 
-        JButton btnRefresh = new JButton("Refresh Data Stok");
-        btnRefresh.addActionListener(e -> loadDataStok());
-        panelStok.add(btnRefresh, BorderLayout.SOUTH);
+        // Tab 1: Dashboard
+        JPanel panelDashboard = createDashboardPanel();
+        tabbedPane.addTab("Dashboard Pesanan", panelDashboard);
 
-        tabbedPane.addTab("Lihat Stok Bahan", panelStok);
-        JPanel panelPermintaan = createPermintaanPanel();
-        tabbedPane.addTab("Buat Permintaan Baru", panelPermintaan);
+        // Tab 2: Input Pesanan
+        JPanel panelInputPesanan = createInputPesananPanel();
+        tabbedPane.addTab("Buat Pesanan Baru", panelInputPesanan);
+
         add(tabbedPane);
+        setVisible(true);
     }
 
-    private JPanel createPermintaanPanel() {
+    // ========== DASHBOARD TAB ==========
+    private JPanel createDashboardPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // 1. Form Header (Atas)
+        // Header dengan Filter dan Search
+        JPanel panelHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        panelHeader.add(new JLabel("Filter Status:"));
+        cmbFilterStatus = new JComboBox<>(new String[]{"Semua", "menunggu", "disetujui", "ditolak", "dibatalkan"});
+        cmbFilterStatus.addActionListener(e -> filterPesanan());
+        panelHeader.add(cmbFilterStatus);
+
+        panelHeader.add(new JLabel("Cari:"));
+        txtSearch = new JTextField(20);
+        txtSearch.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { filterPesanan(); }
+            public void removeUpdate(DocumentEvent e) { filterPesanan(); }
+            public void changedUpdate(DocumentEvent e) { filterPesanan(); }
+        });
+        panelHeader.add(txtSearch);
+
+        JButton btnRefresh = new JButton("Refresh Manual");
+        btnRefresh.addActionListener(e -> loadDataPesanan());
+        panelHeader.add(btnRefresh);
+
+        panel.add(panelHeader, BorderLayout.NORTH);
+
+        // Tabel Pesanan
+        String[] columns = {"No", "Tanggal Masak", "Menu", "Jumlah Porsi", "Status"};
+        modelPesanan = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        tablePesanan = new JTable(modelPesanan);
+        tablePesanan.setRowHeight(25);
+        tablePesanan.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int row = tablePesanan.rowAtPoint(e.getPoint());
+                if (row >= 0) {
+                    toggleExpandRow(row);
+                }
+            }
+        });
+
+        panel.add(new JScrollPane(tablePesanan), BorderLayout.CENTER);
+
+        // Info label
+        JLabel lblInfo = new JLabel("Klik baris untuk melihat detail bahan yang diminta");
+        lblInfo.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        lblInfo.setForeground(Color.GRAY);
+        panel.add(lblInfo, BorderLayout.SOUTH);
+
+        loadDataPesanan();
+        return panel;
+    }
+
+    private void loadDataPesanan() {
+        try {
+            allPesanan.clear();
+            List<Permintaan> list = permintaanDao.getByPemohonId((int) loggedInUser.getId());
+            allPesanan.addAll(list);
+            filterPesanan();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat pesanan: " + e.getMessage());
+        }
+    }
+
+    private void filterPesanan() {
+        try {
+            modelPesanan.setRowCount(0);
+            expandedRow = -1;
+
+            String selectedStatus = (String) cmbFilterStatus.getSelectedItem();
+            String searchText = txtSearch.getText().toLowerCase().trim();
+
+            for (Permintaan p : allPesanan) {
+                boolean statusMatch = selectedStatus.equals("Semua") || p.getStatus().equals(selectedStatus);
+                boolean searchMatch = p.getMenuMakan().toLowerCase().contains(searchText)
+                        || String.valueOf(p.getId()).contains(searchText);
+
+                if (statusMatch && searchMatch) {
+                    modelPesanan.addRow(new Object[]{
+                            p.getId(),
+                            p.getTglMasak(),
+                            p.getMenuMakan(),
+                            p.getJumlahPorsi(),
+                            getStatusLabel(p.getStatus())
+                    });
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void toggleExpandRow(int row) {
+        if (expandedRow == row) {
+            expandedRow = -1;
+            filterPesanan();
+        } else {
+            expandedRow = row;
+            showDetailBahan(row);
+        }
+    }
+
+    private void showDetailBahan(int row) {
+        try {
+            Integer pesananId = (Integer) modelPesanan.getValueAt(row, 0);
+            Permintaan pesanan = permintaanDao.getById(pesananId);
+
+            List<PermintaanDetail> details = detailDao.getByPermintaanId(pesananId);
+
+            // Buat panel untuk detail
+            JPanel panelDetail = new JPanel(new BorderLayout(5, 5));
+            panelDetail.setBorder(BorderFactory.createTitledBorder("Detail Bahan Baku yang Diminta"));
+            panelDetail.setBackground(new Color(240, 240, 240));
+
+            // Tabel detail bahan
+            String[] colDetail = {"ID Bahan", "Nama Bahan", "Jumlah Diminta"};
+            DefaultTableModel modelDetail = new DefaultTableModel(colDetail, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
+            };
+
+            for (PermintaanDetail d : details) {
+                BahanBaku bahan = bahanDao.getById(d.getBahanId());
+                modelDetail.addRow(new Object[]{
+                        d.getBahanId(),
+                        bahan != null ? bahan.getNama() : "N/A",
+                        d.getJumlahDiminta() + " " + (bahan != null ? bahan.getSatuan() : "")
+                });
+            }
+
+            JTable tableDetail = new JTable(modelDetail);
+            tableDetail.setRowHeight(20);
+            panelDetail.add(new JScrollPane(tableDetail), BorderLayout.CENTER);
+
+            // Tombol aksi (Edit/Cancel) - hanya jika status "menunggu"
+            if ("menunggu".equals(pesanan.getStatus())) {
+                JPanel panelAksi = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+                JButton btnEdit = new JButton("Edit Pesanan");
+                btnEdit.addActionListener(e -> editPesanan(pesanan, details));
+                JButton btnCancel = new JButton("Batalkan Pesanan");
+                btnCancel.setBackground(new Color(200, 0, 0));
+                btnCancel.setForeground(Color.WHITE);
+                btnCancel.addActionListener(e -> batalkanPesanan(pesanan));
+                panelAksi.add(btnEdit);
+                panelAksi.add(btnCancel);
+                panelDetail.add(panelAksi, BorderLayout.SOUTH);
+            }
+
+            // Tampilkan detail dalam dialog
+            JDialog dialog = new JDialog(this, "Detail Pesanan #" + pesananId, true);
+            dialog.setSize(600, 400);
+            dialog.setLocationRelativeTo(this);
+            dialog.add(panelDetail);
+            dialog.setVisible(true);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Gagal menampilkan detail: " + e.getMessage());
+        }
+    }
+
+    private void editPesanan(Permintaan pesanan, List<PermintaanDetail> details) {
+        JDialog dlgEdit = new JDialog(this, "Edit Pesanan #" + pesanan.getId(), true);
+        dlgEdit.setSize(700, 500);
+        dlgEdit.setLocationRelativeTo(this);
+
+        JPanel panelEdit = new JPanel(new BorderLayout(10, 10));
+        panelEdit.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Form Header
+        JPanel panelHeader = new JPanel(new GridLayout(2, 2, 10, 10));
+        panelHeader.setBorder(BorderFactory.createTitledBorder("Detail Pesanan"));
+
+        panelHeader.add(new JLabel("Menu Masakan:"));
+        JTextField txtEditMenu = new JTextField(pesanan.getMenuMakan());
+        panelHeader.add(txtEditMenu);
+
+        panelHeader.add(new JLabel("Jumlah Porsi:"));
+        JTextField txtEditPorsi = new JTextField(String.valueOf(pesanan.getJumlahPorsi()));
+        panelHeader.add(txtEditPorsi);
+
+        panelEdit.add(panelHeader, BorderLayout.NORTH);
+
+        // Tabel bahan edit
+        JPanel panelBahan = new JPanel(new BorderLayout(5, 5));
+        panelBahan.setBorder(BorderFactory.createTitledBorder("Daftar Bahan"));
+
+        String[] colEditBahan = {"ID Bahan", "Nama Bahan", "Jumlah Lama", "Jumlah Baru"};
+        DefaultTableModel modelEditBahan = new DefaultTableModel(colEditBahan, 0);
+
+        for (PermintaanDetail d : details) {
+            try {
+                BahanBaku bahan = bahanDao.getById(d.getBahanId());
+                modelEditBahan.addRow(new Object[]{
+                        d.getBahanId(),
+                        bahan != null ? bahan.getNama() : "N/A",
+                        d.getJumlahDiminta(),
+                        d.getJumlahDiminta()
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        JTable tableEditBahan = new JTable(modelEditBahan);
+        tableEditBahan.setRowHeight(25);
+        panelBahan.add(new JScrollPane(tableEditBahan), BorderLayout.CENTER);
+
+        panelEdit.add(panelBahan, BorderLayout.CENTER);
+
+        // Tombol Simpan/Batal
+        JPanel panelBtnEdit = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton btnSimpan = new JButton("Simpan Perubahan");
+        btnSimpan.addActionListener(e -> {
+            try {
+                pesanan.setMenuMakan(txtEditMenu.getText());
+                pesanan.setJumlahPorsi(Integer.parseInt(txtEditPorsi.getText()));
+                permintaanDao.update(pesanan);
+
+                // Update detail bahan
+                detailDao.deleteByPermintaanId(pesanan.getId());
+                for (int i = 0; i < modelEditBahan.getRowCount(); i++) {
+                    PermintaanDetail d = new PermintaanDetail();
+                    d.setPermintaanId(pesanan.getId());
+                    d.setBahanId((Integer) modelEditBahan.getValueAt(i, 0));
+                    d.setJumlahDiminta((int) modelEditBahan.getValueAt(i, 3));
+                    detailDao.save(d);
+                }
+
+                JOptionPane.showMessageDialog(dlgEdit, "Pesanan berhasil diupdate!");
+                dlgEdit.dispose();
+                loadDataPesanan();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dlgEdit, "Gagal menyimpan: " + ex.getMessage());
+            }
+        });
+        panelBtnEdit.add(btnSimpan);
+        panelBtnEdit.add(new JButton("Batal") {{
+            addActionListener(e -> dlgEdit.dispose());
+        }});
+
+        panelEdit.add(panelBtnEdit, BorderLayout.SOUTH);
+
+        dlgEdit.add(panelEdit);
+        dlgEdit.setVisible(true);
+    }
+
+    private void batalkanPesanan(Permintaan pesanan) {
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Apakah Anda yakin ingin membatalkan pesanan ini?",
+                "Konfirmasi Pembatalan",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                pesanan.setStatus("dibatalkan");
+                permintaanDao.update(pesanan);
+                JOptionPane.showMessageDialog(this, "Pesanan berhasil dibatalkan!");
+                loadDataPesanan();
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Gagal membatalkan: " + e.getMessage());
+            }
+        }
+    }
+
+    // ========== INPUT PESANAN TAB ==========
+    private JPanel createInputPesananPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // 1. Header (Atas)
         JPanel panelHeader = new JPanel(new GridLayout(3, 2, 10, 10));
         panelHeader.setBorder(BorderFactory.createTitledBorder("Detail Masakan"));
 
@@ -105,7 +398,7 @@ public class dapur extends JFrame {
         JPanel panelTengah = new JPanel(new BorderLayout(5, 5));
         panelTengah.setBorder(BorderFactory.createTitledBorder("Daftar Bahan yang Dibutuhkan"));
 
-        // Baris Input Bahan
+        // Input bahan
         JPanel panelInput = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panelInput.add(new JLabel("Pilih Bahan:"));
         cmbBahanBaku = new JComboBox<>();
@@ -122,7 +415,7 @@ public class dapur extends JFrame {
 
         panelTengah.add(panelInput, BorderLayout.NORTH);
 
-        // Tabel Keranjang
+        // Tabel keranjang
         String[] colKeranjang = {"ID Bahan", "Nama Bahan", "Jumlah Diminta", "Satuan"};
         modelKeranjang = new DefaultTableModel(colKeranjang, 0);
         tableKeranjang = new JTable(modelKeranjang);
@@ -146,27 +439,8 @@ public class dapur extends JFrame {
 
         panel.add(panelBawah, BorderLayout.SOUTH);
 
+        loadDataBahanCombo();
         return panel;
-    }
-
-    private void loadDataStok() {
-        try {
-            modelStok.setRowCount(0); 
-            List<BahanBaku> list = bahanDao.getAll();
-            for (BahanBaku b : list) {
-                modelStok.addRow(new Object[]{
-                        b.getId(),
-                        b.getNama(),
-                        b.getKategori(),
-                        b.getJumlah(),
-                        b.getSatuan(),
-                        b.getStatus(),
-                        b.getTanggalKadaluarsa()
-                });
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Gagal memuat stok: " + e.getMessage());
-        }
     }
 
     private void loadDataBahanCombo() {
@@ -197,16 +471,13 @@ public class dapur extends JFrame {
                 return;
             }
 
-            // Tambah ke list sementara (memori)
             PermintaanDetail detail = new PermintaanDetail();
             detail.setBahanId(selected.id);
             detail.setJumlahDiminta(qty);
             keranjangPermintaan.add(detail);
 
-            // Tampilkan di tabel UI
             modelKeranjang.addRow(new Object[]{selected.id, selected.nama, qty, selected.satuan});
 
-            // Reset input kecil
             txtQtyBahan.setText("");
             cmbBahanBaku.requestFocus();
 
@@ -228,7 +499,7 @@ public class dapur extends JFrame {
 
         try {
             Permintaan p = new Permintaan();
-            p.setPemohonId(loggedInUser != null ? loggedInUser.getId() : 0);
+            p.setPemohonId((int) loggedInUser.getId());
             p.setMenuMakan(txtMenuMasakan.getText());
             p.setJumlahPorsi(Integer.parseInt(txtJumlahPorsi.getText()));
             p.setTglMasak(Date.valueOf(LocalDate.now().plusDays(1)));
@@ -244,6 +515,7 @@ public class dapur extends JFrame {
 
             JOptionPane.showMessageDialog(this, "Sukses! Permintaan ID " + p.getId() + " berhasil dikirim.");
             resetForm();
+            loadDataPesanan();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -259,7 +531,30 @@ public class dapur extends JFrame {
         keranjangPermintaan.clear();
     }
 
-    // --- HELPER CLASS UNTUK COMBOBOX ---
+    // ========== AUTO-REFRESH ==========
+    private void startAutoRefresh() {
+        refreshTimer = new Timer(5000, e -> {
+            JTabbedPane tabbedPane = (JTabbedPane) getContentPane().getComponent(0);
+            if (tabbedPane.getSelectedIndex() == 0) {
+                loadDataPesanan();
+            }
+        });
+        refreshTimer.start();
+    }
+
+    @Override
+    public void dispose() {
+        if (refreshTimer != null) {
+            refreshTimer.stop();
+        }
+        super.dispose();
+    }
+
+    private String getStatusLabel(String status) {
+        return status.substring(0, 1).toUpperCase() + status.substring(1);
+    }
+
+    // Helper class
     private static class BahanBakuItem {
         int id;
         String nama;

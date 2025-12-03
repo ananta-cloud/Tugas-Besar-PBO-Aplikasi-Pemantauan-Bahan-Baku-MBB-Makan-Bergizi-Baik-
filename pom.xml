@@ -47,11 +47,11 @@
 		<finalName>daoTemplate</finalName>
 		<plugins>
 			<plugin>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.1</version>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.1.0</version>
 				<configuration>
-					<source>2.5</source>
-					<target>2.5</target>
+					<mainClass>com.mbg.MainApp</mainClass>
 				</configuration>
 			</plugin>
 		</plugins>

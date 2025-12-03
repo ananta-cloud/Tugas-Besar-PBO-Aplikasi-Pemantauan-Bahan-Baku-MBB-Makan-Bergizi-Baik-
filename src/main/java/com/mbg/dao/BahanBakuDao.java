@@ -8,4 +8,8 @@ public class BahanBakuDao extends GenericDaoImpl<Integer, BahanBaku> {
     public BahanBakuDao() {
         super(BahanBaku.class, new MBGDataSource());
     }
+
+    public BahanBaku getById(Integer id) throws Exception {
+        return getSingleEntity("id = ?", id);
+    }
 }
