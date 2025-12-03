@@ -31,6 +31,11 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 
+import org.jdatepicker.impl.JDatePickerImpl;
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.UtilDateModel;
+import java.util.Properties;
+
 import com.mbg.dao.BahanBakuDao;
 import com.mbg.dao.PermintaanDao;
 import com.mbg.dao.PermintaanDetailDao;
@@ -38,6 +43,7 @@ import com.mbg.model.BahanBaku;
 import com.mbg.model.Permintaan;
 import com.mbg.model.PermintaanDetail;
 import com.mbg.model.User;
+import com.mbg.helper.DateLabelFormatter;
 
 public class dapur extends JFrame {
 
@@ -45,6 +51,7 @@ public class dapur extends JFrame {
     private BahanBakuDao bahanDao;
     private PermintaanDao permintaanDao;
     private PermintaanDetailDao detailDao;
+    private JDatePickerImpl datePicker;
 
     // Dashboard Components
     private JTable tablePesanan;
@@ -377,6 +384,7 @@ public class dapur extends JFrame {
     private JPanel createInputPesananPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
 
         // 1. Header (Atas)
         JPanel panelHeader = new JPanel(new GridLayout(3, 2, 10, 10));
@@ -390,10 +398,19 @@ public class dapur extends JFrame {
         txtJumlahPorsi = new JTextField();
         panelHeader.add(txtJumlahPorsi);
 
-        panelHeader.add(new JLabel("Tanggal Masak:"));
-        JLabel lblTgl = new JLabel(LocalDate.now().plusDays(1).toString() + " (Besok)");
-        panelHeader.add(lblTgl);
+        // Model dan panel date picker
+        UtilDateModel model = new UtilDateModel();
+        model.setSelected(true);
+        Properties dateProps = new Properties();
+        dateProps.put("text.today", "Hari Ini");
+        dateProps.put("text.month", "Bulan");
+        dateProps.put("text.year", "Tahun");
+        JDatePanelImpl datePanel = new JDatePanelImpl(model, dateProps);
+        datePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
 
+        panelHeader.add(new JLabel("Tanggal Masak:"));
+        panelHeader.add(datePicker);
+        
         panel.add(panelHeader, BorderLayout.NORTH);
 
         // 2. Form Input Bahan (Tengah)
@@ -430,24 +447,24 @@ public class dapur extends JFrame {
         JButton btnReset = new JButton("Reset Form");
         btnReset.addActionListener(e -> resetForm());
         JButton btnKirim = new JButton("Kirim Permintaan");
-        btnKirim.setBackground(new Color(0, 128, 0)); // warna dasar
+        btnKirim.setBackground(new Color(0, 128, 0)); 
         btnKirim.setForeground(Color.WHITE);
         btnKirim.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btnKirim.setFocusPainted(false);      // hilangkan border fokus default
-        btnKirim.setBorderPainted(false);     // hilangkan border default
-        btnKirim.setOpaque(true);             // pastikan tombol tidak transparan
-        btnKirim.setContentAreaFilled(true);  // isi area tombol dengan warna background
+        btnKirim.setFocusPainted(false);     
+        btnKirim.setBorderPainted(false);    
+        btnKirim.setOpaque(true);     
+        btnKirim.setContentAreaFilled(true); 
 
         // Hover effect
         btnKirim.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                btnKirim.setBackground(new Color(0, 160, 0)); // lebih terang saat hover
+                btnKirim.setBackground(new Color(0, 160, 0)); 
             }
 
             @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                btnKirim.setBackground(new Color(0, 128, 0)); // kembali ke warna semula
+                btnKirim.setBackground(new Color(0, 128, 0)); 
             }
         });
 
@@ -522,10 +539,17 @@ public class dapur extends JFrame {
             p.setPemohonId((int) loggedInUser.getId());
             p.setMenuMakan(txtMenuMasakan.getText());
             p.setJumlahPorsi(Integer.parseInt(txtJumlahPorsi.getText()));
-            p.setTglMasak(Date.valueOf(LocalDate.now().plusDays(1)));
+
+            Date selectedDate = (Date) datePicker.getModel().getValue();
+            if (selectedDate != null) {
+                p.setTglMasak(selectedDate); // Set tanggal sesuai pilihan user
+            } else {
+                JOptionPane.showMessageDialog(this, "Pilih tanggal masak!");
+                return;
+            }
+
             p.setStatus("menunggu");
             p.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-
             p = permintaanDao.save(p);
 
             for (PermintaanDetail d : keranjangPermintaan) {
@@ -542,6 +566,7 @@ public class dapur extends JFrame {
             JOptionPane.showMessageDialog(this, "Gagal menyimpan permintaan: " + e.getMessage());
         }
     }
+
 
     private void resetForm() {
         txtMenuMasakan.setText("");
