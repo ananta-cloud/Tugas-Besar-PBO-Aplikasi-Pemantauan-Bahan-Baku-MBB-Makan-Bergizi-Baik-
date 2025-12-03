@@ -8,7 +8,7 @@ import com.mbg.model.PermintaanDetail;
 
 public class PermintaanDetailDao extends GenericDaoImpl<Integer, PermintaanDetail> {
     public PermintaanDetailDao() {
-        super(PermintaanDetail.class, new MBGDataSource());
+        super(PermintaanDetail.class, MBGDataSource.getInstance());
     }
 
     public List<PermintaanDetail> getByPermintaanId(Integer permintaanId) throws Exception {

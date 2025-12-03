@@ -6,7 +6,7 @@ import com.mbg.model.BahanBaku;
 
 public class BahanBakuDao extends GenericDaoImpl<Integer, BahanBaku> {
     public BahanBakuDao() {
-        super(BahanBaku.class, new MBGDataSource());
+        super(BahanBaku.class, MBGDataSource.getInstance());
     }
 
     public BahanBaku getById(Integer id) throws Exception {
