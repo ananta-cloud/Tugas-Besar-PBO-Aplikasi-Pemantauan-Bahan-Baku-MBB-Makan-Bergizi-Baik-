@@ -12,6 +12,11 @@
 	<name>daoTemplate</name>
 
     <dependencies>
+		<dependency>
+			<groupId>org.mindrot</groupId>
+			<artifactId>jbcrypt</artifactId>
+			<version>0.4</version>
+		</dependency>
 			
 <!-- 		<dependency> -->
 <!-- 		    <groupId>org.hibernate.javax.persistence</groupId> -->
@@ -29,7 +34,13 @@
 			<artifactId>mysql-connector-java</artifactId>
 			<version>8.0.33</version>
 		</dependency>
-		
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <version>RELEASE</version>
+            <scope>compile</scope>
+        </dependency>
+
     </dependencies>
   
  	 <build>

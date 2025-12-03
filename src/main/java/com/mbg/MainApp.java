@@ -1,240 +1,128 @@
 package com.mbg;
 
-import com.mbg.dao.*;
-import com.mbg.model.*;
+import com.mbg.dao.UserDao;
+import com.mbg.model.User;
 import com.codeway.daoTemplate.utils.TemplateLogger;
 
-import java.sql.Date;
-import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Scanner;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
 
-public class MainApp {
-    private static Scanner scan = new Scanner(System.in);
-    private static UserDao userDao = new UserDao();
-    private static BahanBakuDao bahanDao = new BahanBakuDao();
-    private static PermintaanDao permintaanDao = new PermintaanDao();
-    private static PermintaanDetailDao detailDao = new PermintaanDetailDao();
+public class MainApp extends JFrame {
 
-    private static User loggedInUser = null;
+    private JTextField txtEmail;
+    private JPasswordField txtPassword;
+    private UserDao userDao;
 
     public static void main(String[] args) {
-        // Matikan log query agar console bersih
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ignored) { }
+
         TemplateLogger.shouldLog = false;
 
-        System.out.println("=== APLIKASI PEMANTAUAN BAHAN BAKU MBG ===");
-
-        try {
-            login();
-        } catch (Exception e) {
-            System.out.println("Terjadi kesalahan sistem: " + e.getMessage());
-            e.printStackTrace();
-        }
+        SwingUtilities.invokeLater(() -> {
+            new MainApp().setVisible(true);
+        });
     }
 
-    // --- HELPER UNTUK VALIDASI ANGKA (ANTI CRASH) ---
-    private static int bacaInputAngka(String pesan) {
-        while (true) {
-            System.out.print(pesan);
-            String input = scan.nextLine().trim();
-            try {
-                return Integer.parseInt(input);
-            } catch (NumberFormatException e) {
-                System.out.println(">> ERROR: Harap masukkan angka saja (contoh: 10). Jangan tulis satuan seperti 'kg' atau 'liter'.");
-            }
-        }
+    public MainApp() {
+        userDao = new UserDao();
+        initComponents();
     }
 
-    private static void login() throws Exception {
-        System.out.println("\n--- LOGIN ---");
-        System.out.print("Masukkan Email: ");
-        String email = scan.nextLine();
+    private void initComponents() {
+        setTitle("Login - MBG System");
+        setSize(400, 300);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setResizable(false);
 
-        System.out.print("Masukkan Password (pass123): ");
-        String pass = scan.nextLine();
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBackground(Color.WHITE);
+        add(panel);
 
-        User user = userDao.getByEmail(email);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        if (user != null) {
-            loggedInUser = user;
-            System.out.println("Login Berhasil! Selamat datang, " + user.getName() + " [" + user.getRole().toUpperCase() + "]");
+        JLabel lblTitle = new JLabel("Aplikasi Makan Bergizi Baik");
+        lblTitle.setFont(new Font("SansSerif", Font.BOLD, 18));
+        lblTitle.setHorizontalAlignment(SwingConstants.CENTER);
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        panel.add(lblTitle, gbc);
 
-            if ("gudang".equalsIgnoreCase(user.getRole())) {
-                menuGudang();
-            } else if ("dapur".equalsIgnoreCase(user.getRole())) {
-                menuDapur();
-            }
-        } else {
-            System.out.println(">> Gagal: Email tidak ditemukan!");
-            login();
-        }
+        gbc.gridy = 1; gbc.gridwidth = 1;
+        panel.add(new JLabel("Email:"), gbc);
+
+        txtEmail = new JTextField(20);
+        gbc.gridx = 1;
+        panel.add(txtEmail, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 2;
+        panel.add(new JLabel("Password:"), gbc);
+
+        txtPassword = new JPasswordField(20);
+        gbc.gridx = 1;
+        panel.add(txtPassword, gbc);
+
+        JButton btnLogin = new JButton("LOGIN");
+        btnLogin.setBackground(new Color(253, 253, 253));
+        btnLogin.setForeground(new Color(30, 60, 180));
+        btnLogin.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnLogin.setFocusPainted(false);
+        btnLogin.addActionListener(this::handleLogin);
+
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.BOTH;
+        panel.add(btnLogin, gbc);
+
+        getRootPane().setDefaultButton(btnLogin);
     }
 
-    // ================= MENU DAPUR =================
-    private static void menuDapur() throws Exception {
-        while (true) {
-            System.out.println("\n--- MENU DAPUR ---");
-            System.out.println("1. Lihat Stok Bahan Baku");
-            System.out.println("2. Buat Permintaan Baru");
-            System.out.println("3. Keluar");
+    private void handleLogin(ActionEvent e) {
+        String email = txtEmail.getText().trim();
 
-            // Menggunakan String untuk menu agar fleksibel
-            System.out.print("Pilih: ");
-            String choice = scan.nextLine();
-
-            if ("1".equals(choice)) {
-                lihatStok();
-            } else if ("2".equals(choice)) {
-                buatPermintaan();
-            } else if ("3".equals(choice)) {
-                System.out.println("Sampai Jumpa!");
-                System.exit(0);
-            } else {
-                System.out.println("Pilihan tidak valid.");
-            }
-        }
-    }
-
-    private static void lihatStok() throws Exception {
-        List<BahanBaku> list = bahanDao.getAll();
-        System.out.println("\n--- STOK BAHAN BAKU ---");
-        System.out.printf("%-5s %-25s %-10s %-10s %-15s\n", "ID", "Nama", "Jumlah", "Satuan", "Status");
-        System.out.println("---------------------------------------------------------------------");
-        for (BahanBaku b : list) {
-            System.out.printf("%-5d %-25s %-10d %-10s %-15s\n",
-                    b.getId(), b.getNama(), b.getJumlah(), b.getSatuan(), b.getStatus());
-        }
-        System.out.println("---------------------------------------------------------------------");
-    }
-
-    private static void buatPermintaan() throws Exception {
-        System.out.println("\n--- BUAT PERMINTAAN ---");
-
-        Permintaan p = new Permintaan();
-        p.setPemohonId(loggedInUser.getId());
-        p.setTglMasak(Date.valueOf(LocalDate.now().plusDays(1))); // Masak besok
-        p.setStatus("menunggu");
-        p.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-
-        System.out.print("Menu Masakan: ");
-        p.setMenuMakan(scan.nextLine());
-
-        // Gunakan helper validasi angka
-        p.setJumlahPorsi(bacaInputAngka("Jumlah Porsi (angka): "));
-
-        // Simpan Header Permintaan
-        p = permintaanDao.save(p);
-        System.out.println(">> Header permintaan dibuat (ID: " + p.getId() + "). Silakan masukkan bahan.");
-
-        lihatStok(); // Tampilkan stok agar user tahu ID bahan
-
-        // Input Detail Bahan
-        while (true) {
-            System.out.println("\n-- Tambah Bahan --");
-            int idBahan = bacaInputAngka("ID Bahan (ketik 0 untuk SELESAI): ");
-
-            if (idBahan == 0) break;
-
-            // Validasi apakah ID bahan ada (opsional, untuk UX lebih baik)
-            BahanBaku cekBahan = bahanDao.get(idBahan);
-            if (cekBahan == null) {
-                System.out.println(">> Error: ID Bahan tidak ditemukan.");
-                continue;
-            }
-
-            int qty = bacaInputAngka("Jumlah Diminta (" + cekBahan.getSatuan() + "): ");
-
-            PermintaanDetail pd = new PermintaanDetail();
-            pd.setPermintaanId(p.getId());
-            pd.setBahanId(idBahan);
-            pd.setJumlahDiminta(qty);
-            detailDao.save(pd);
-
-            System.out.println(">> OK: " + cekBahan.getNama() + " (" + qty + " " + cekBahan.getSatuan() + ") ditambahkan.");
-        }
-        System.out.println(">> SUKSES: Permintaan berhasil dikirim ke Gudang.");
-    }
-
-    // ================= MENU GUDANG =================
-    private static void menuGudang() throws Exception {
-        while (true) {
-            System.out.println("\n--- MENU GUDANG ---");
-            System.out.println("1. Kelola Permintaan (Approve/Reject)");
-            System.out.println("2. Lihat Stok Bahan");
-            System.out.println("3. Keluar");
-            System.out.print("Pilih: ");
-            String choice = scan.nextLine();
-
-            if ("1".equals(choice)) {
-                kelolaPermintaan();
-            } else if ("2".equals(choice)) {
-                lihatStok();
-            } else if ("3".equals(choice)) {
-                System.exit(0);
-            } else {
-                System.out.println("Pilihan tidak valid.");
-            }
-        }
-    }
-
-    private static void kelolaPermintaan() throws Exception {
-        List<Permintaan> pending = permintaanDao.getByStatus("menunggu");
-        if (pending.isEmpty()) {
-            System.out.println(">> Tidak ada permintaan dengan status 'menunggu'.");
+        // Validasi input kosong saja
+        if (email.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Harap isi Email!", "Peringatan", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        for (Permintaan p : pending) {
-            User pemohon = userDao.get(p.getPemohonId());
-            System.out.println("\n========================================");
-            System.out.println("ID REQUEST: " + p.getId());
-            System.out.println("Pemohon   : " + (pemohon!=null ? pemohon.getName() : "Unknown"));
-            System.out.println("Menu      : " + p.getMenuMakan() + " (" + p.getJumlahPorsi() + " porsi)");
-            System.out.println("========================================");
+        try {
+            // Ambil user berdasarkan email
+            User user = userDao.getByEmail(email);
 
-            List<PermintaanDetail> details = detailDao.getByPermintaanId(p.getId());
-            System.out.println("Daftar Bahan:");
+            if (user != null) {
+                System.out.println("User ditemukan: " + user.getName());
+                System.out.println("Bypass password check...");
 
-            boolean stokCukup = true;
-            for (PermintaanDetail pd : details) {
-                BahanBaku bb = bahanDao.get(pd.getBahanId());
-                String statusStok = (bb.getJumlah() >= pd.getJumlahDiminta()) ? "[OK]" : "[KURANG]";
-                System.out.printf(" - %-20s : Minta %-3d | Stok %-3d %s\n",
-                        bb.getNama(), pd.getJumlahDiminta(), bb.getJumlah(), statusStok);
+                bukaDashboard(user);
 
-                if (bb.getJumlah() < pd.getJumlahDiminta()) stokCukup = false;
-            }
-
-            System.out.println("----------------------------------------");
-            System.out.println("1: SETUJUI (Approve)");
-            System.out.println("2: TOLAK (Reject)");
-            System.out.println("0: LEWATI (Skip)");
-
-            int aksi = bacaInputAngka("Pilih Aksi: ");
-
-            if (aksi == 1) {
-                if (!stokCukup) {
-                    System.out.println(">> GAGAL: Stok tidak mencukupi untuk menyetujui permintaan ini.");
-                } else {
-                    // Kurangi Stok
-                    for (PermintaanDetail pd : details) {
-                        BahanBaku bb = bahanDao.get(pd.getBahanId());
-                        bb.setJumlah(bb.getJumlah() - pd.getJumlahDiminta());
-                        if (bb.getJumlah() == 0) bb.setStatus("habis");
-                        bahanDao.update(bb);
-                    }
-                    p.setStatus("disetujui");
-                    permintaanDao.update(p);
-                    System.out.println(">> SUKSES: Permintaan DISETUJUI. Stok telah dikurangi.");
-                }
-            } else if (aksi == 2) {
-                p.setStatus("ditolak");
-                permintaanDao.update(p);
-                System.out.println(">> SUKSES: Permintaan DITOLAK.");
             } else {
-                System.out.println(">> Permintaan dilewati.");
+                JOptionPane.showMessageDialog(this, "Email tidak ditemukan!", "Login Gagal", JOptionPane.ERROR_MESSAGE);
             }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error Database: " + ex.getMessage());
+        }
+    }
+
+    private void bukaDashboard(@org.jetbrains.annotations.NotNull User user) {
+        this.dispose(); // Tutup Login
+
+        String role = user.getRole();
+        if (role == null) role = "";
+
+        // Arahkan ke Dashboard sesuai Role
+        if (role.equalsIgnoreCase("dapur")) {
+            new com.mbg.gui.dapur.dapur(user).setVisible(true);
+        } else if (role.equalsIgnoreCase("gudang")) {
+            new com.mbg.gui.gudang.gudang(user).setVisible(true);
+        } else {
+            JOptionPane.showMessageDialog(this, "Role user tidak valid: " + role);
         }
     }
 }
