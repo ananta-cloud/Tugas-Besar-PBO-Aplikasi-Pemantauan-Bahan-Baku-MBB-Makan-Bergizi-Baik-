@@ -57,7 +57,13 @@ public class gudang extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Styling Tab Pane
+        // Gunakan BorderLayout untuk Frame utama
+        setLayout(new BorderLayout());
+
+        // 1. Tambahkan Header (Info User & Tombol Logout)
+        add(createHeaderPanel(), BorderLayout.NORTH);
+
+        // 2. Setup TabbedPane
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("SansSerif", Font.BOLD, 14));
 
@@ -65,7 +71,7 @@ public class gudang extends JFrame {
         JPanel panelStok = createPanelKelolaStok();
         tabbedPane.addTab("Kelola Stok Bahan", panelStok);
 
-        // Tab 2: Kelola Permintaan
+        // Tab 2: Kelola Permintaan dari Dapur
         JPanel panelPermintaan = createPanelPermintaan();
         tabbedPane.addTab("Kelola Permintaan", panelPermintaan);
 
@@ -76,7 +82,7 @@ public class gudang extends JFrame {
                 if (i == selectedIndex) {
                     // Tab Aktif: Biru, Teks Putih
                     tabbedPane.setBackgroundAt(i, new Color(0, 166, 255));
-                    tabbedPane.setForegroundAt(i, new Color(0, 166, 255));
+                    tabbedPane.setForegroundAt(i, new Color(104, 0, 0));
                 } else {
                     // Tab Tidak Aktif: Putih, Teks Hitam
                     tabbedPane.setBackgroundAt(i, Color.WHITE);
@@ -88,7 +94,47 @@ public class gudang extends JFrame {
         tabbedPane.addChangeListener(e -> updateTabColors.run());
         updateTabColors.run(); // Jalankan sekali di awal
 
-        add(tabbedPane);
+        // Tambahkan TabbedPane ke Center
+        add(tabbedPane, BorderLayout.CENTER);
+    }
+
+    // ========== HEADER & LOGOUT ==========
+    private JPanel createHeaderPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(245, 245, 245)); // Background abu muda
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY), // Garis bawah
+                BorderFactory.createEmptyBorder(10, 15, 10, 15) // Padding
+        ));
+
+        // Info User (Kiri)
+        JLabel lblUser = new JLabel("Selamat Datang, " + (loggedInUser != null ? loggedInUser.getName() : "Admin"));
+        lblUser.setFont(new Font("SansSerif", Font.BOLD, 16));
+        lblUser.setForeground(Color.DARK_GRAY);
+        lblUser.setIcon(UIManager.getIcon("FileView.computerIcon")); // Icon user default (opsional)
+        panel.add(lblUser, BorderLayout.WEST);
+
+        // Tombol Logout (Kanan)
+        JButton btnLogout = createFlatButton("Logout", new Color(220, 53, 69)); // Warna Merah
+        btnLogout.setPreferredSize(new Dimension(100, 35));
+        btnLogout.addActionListener(e -> handleLogout());
+        panel.add(btnLogout, BorderLayout.EAST);
+
+        return panel;
+    }
+
+    private void handleLogout() {
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Apakah Anda yakin ingin keluar?",
+                "Konfirmasi Logout",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            this.dispose(); // Tutup window saat ini
+            new com.mbg.MainApp().setVisible(true); // Kembali ke Login
+        }
     }
 
     // ========== TAB 1: KELOLA STOK BAHAN ==========
@@ -111,9 +157,7 @@ public class gudang extends JFrame {
         };
         tableStokGudang = new JTable(modelStokGudang);
 
-        // --- TERAPKAN STYLE TABEL DI SINI ---
         styleTable(tableStokGudang);
-        // ------------------------------------
 
         tableStokGudang.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -175,7 +219,7 @@ public class gudang extends JFrame {
 
         panel.add(panelInput, BorderLayout.CENTER);
 
-        // Tombol Aksi (Dengan Style Flat)
+        // Tombol Aksi
         JPanel panelButton = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 
         JButton btnReset = createFlatButton("Reset Form", new Color(108, 117, 125));
