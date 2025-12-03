@@ -182,8 +182,9 @@ public class dapur extends JFrame {
                         || String.valueOf(p.getId()).contains(searchText);
 
                 if (statusMatch && searchMatch) {
+                    int no = modelPesanan.getRowCount() + 1;
                     modelPesanan.addRow(new Object[]{
-                            p.getId(),
+                            no,
                             p.getTglMasak(),
                             p.getMenuMakan(),
                             p.getJumlahPorsi(),
@@ -219,7 +220,7 @@ public class dapur extends JFrame {
             panelDetail.setBackground(new Color(240, 240, 240));
 
             // Tabel detail bahan
-            String[] colDetail = {"ID Bahan", "Nama Bahan", "Jumlah Diminta"};
+            String[] colDetail = {"No", "Nama Bahan", "Jumlah Diminta"};
             DefaultTableModel modelDetail = new DefaultTableModel(colDetail, 0) {
                 @Override
                 public boolean isCellEditable(int row, int column) {
@@ -229,8 +230,9 @@ public class dapur extends JFrame {
 
             for (PermintaanDetail d : details) {
                 BahanBaku bahan = bahanDao.getById(d.getBahanId());
+                int no = modelDetail.getRowCount() + 1;
                 modelDetail.addRow(new Object[]{
-                        d.getBahanId(),
+                        no,
                         bahan != null ? bahan.getNama() : "N/A",
                         d.getJumlahDiminta() + " " + (bahan != null ? bahan.getSatuan() : "")
                 });
@@ -416,7 +418,7 @@ public class dapur extends JFrame {
         panelTengah.add(panelInput, BorderLayout.NORTH);
 
         // Tabel keranjang
-        String[] colKeranjang = {"ID Bahan", "Nama Bahan", "Jumlah Diminta", "Satuan"};
+        String[] colKeranjang = {"No", "Nama Bahan", "Jumlah Diminta", "Satuan"};
         modelKeranjang = new DefaultTableModel(colKeranjang, 0);
         tableKeranjang = new JTable(modelKeranjang);
         panelTengah.add(new JScrollPane(tableKeranjang), BorderLayout.CENTER);
@@ -427,12 +429,30 @@ public class dapur extends JFrame {
         JPanel panelBawah = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton btnReset = new JButton("Reset Form");
         btnReset.addActionListener(e -> resetForm());
-
         JButton btnKirim = new JButton("Kirim Permintaan");
-        btnKirim.setBackground(new Color(0, 128, 0));
+        btnKirim.setBackground(new Color(0, 128, 0)); // warna dasar
         btnKirim.setForeground(Color.WHITE);
         btnKirim.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnKirim.setFocusPainted(false);      // hilangkan border fokus default
+        btnKirim.setBorderPainted(false);     // hilangkan border default
+        btnKirim.setOpaque(true);             // pastikan tombol tidak transparan
+        btnKirim.setContentAreaFilled(true);  // isi area tombol dengan warna background
+
+        // Hover effect
+        btnKirim.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btnKirim.setBackground(new Color(0, 160, 0)); // lebih terang saat hover
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btnKirim.setBackground(new Color(0, 128, 0)); // kembali ke warna semula
+            }
+        });
+
         btnKirim.addActionListener(e -> kirimPermintaan());
+
 
         panelBawah.add(btnReset);
         panelBawah.add(btnKirim);
