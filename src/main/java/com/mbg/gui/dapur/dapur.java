@@ -85,6 +85,43 @@ public class dapur extends JFrame {
         startAutoRefresh();
     }
 
+    private void styleTable(JTable table) {
+        // 1. Set Font & Row Height
+        table.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        table.setRowHeight(30);
+
+        // 2. Setup Renderer untuk ISI TABEL (Rata Tengah)
+        javax.swing.table.DefaultTableCellRenderer centerRenderer = new javax.swing.table.DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(javax.swing.JLabel.CENTER);
+
+        // 3. Setup Renderer untuk HEADER TABEL (Rata Tengah + Bold)
+        javax.swing.table.DefaultTableCellRenderer headerRenderer = new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                // Ambil komponen default
+                super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+                // Set Style Header
+                setFont(new Font("SansSerif", Font.BOLD, 12));
+                setHorizontalAlignment(javax.swing.JLabel.CENTER);
+                setBackground(new Color(230, 230, 230)); // Warna abu muda agar terlihat seperti header
+                setForeground(Color.BLACK);
+                setBorder(javax.swing.UIManager.getBorder("TableHeader.cellBorder")); // Border bawaan OS
+
+                return this;
+            }
+        };
+
+        // 4. Terapkan Renderer ke Setiap Kolom
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            // Terapkan ke Isi Tabel
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+
+            // Terapkan ke Header Tabel
+            table.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
+        }
+    }
+
     private void initComponents() {
         setTitle("Aplikasi Dapur - " + (loggedInUser != null ? loggedInUser.getName() : "User"));
         setSize(1000, 650);
@@ -92,15 +129,31 @@ public class dapur extends JFrame {
         setLocationRelativeTo(null);
 
         JTabbedPane tabbedPane = new JTabbedPane();
-
         // Tab 1: Dashboard
         JPanel panelDashboard = createDashboardPanel();
         tabbedPane.addTab("Dashboard Pesanan", panelDashboard);
-
         // Tab 2: Input Pesanan
         JPanel panelInputPesanan = createInputPesananPanel();
         tabbedPane.addTab("Buat Pesanan Baru", panelInputPesanan);
+        tabbedPane.setFont(new Font("SansSerif", Font.BOLD, 14));
 
+        // 2. Fungsi Helper untuk update warna
+        Runnable updateTabColors = () -> {
+            int selectedIndex = tabbedPane.getSelectedIndex();
+            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                if (i == selectedIndex) {
+                    // TAB AKTIF: Warna Biru Langit (Sesuai request) & Teks Putih
+                    tabbedPane.setBackgroundAt(i, new Color(0, 0, 0));
+                    tabbedPane.setForegroundAt(i, new Color(0, 255, 233));
+                } else {
+                    // TAB TIDAK AKTIF: Putih & Teks Hitam
+                    tabbedPane.setBackgroundAt(i, Color.WHITE);
+                    tabbedPane.setForegroundAt(i, Color.BLACK);
+                }
+            }
+        };
+        tabbedPane.addChangeListener(e -> updateTabColors.run());
+        updateTabColors.run();
         add(tabbedPane);
         setVisible(true);
     }
@@ -141,6 +194,9 @@ public class dapur extends JFrame {
             }
         };
         tablePesanan = new JTable(modelPesanan);
+        styleTable(tablePesanan);
+        tablePesanan.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        tablePesanan.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
         tablePesanan.setRowHeight(25);
         tablePesanan.addMouseListener(new MouseAdapter() {
             @Override
@@ -156,7 +212,7 @@ public class dapur extends JFrame {
 
         // Info label
         JLabel lblInfo = new JLabel("Klik baris untuk melihat detail bahan yang diminta");
-        lblInfo.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        lblInfo.setFont(new Font("SansSerif", Font.ITALIC, 12));
         lblInfo.setForeground(Color.GRAY);
         panel.add(lblInfo, BorderLayout.SOUTH);
 
@@ -246,7 +302,10 @@ public class dapur extends JFrame {
             }
 
             JTable tableDetail = new JTable(modelDetail);
-            tableDetail.setRowHeight(20);
+            styleTable(tableDetail);
+            tableDetail.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            tableDetail.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
+            tableDetail.setRowHeight(30);
             panelDetail.add(new JScrollPane(tableDetail), BorderLayout.CENTER);
 
             // Tombol aksi (Edit/Cancel) - hanya jika status "menunggu"
@@ -320,7 +379,10 @@ public class dapur extends JFrame {
         }
 
         JTable tableEditBahan = new JTable(modelEditBahan);
-        tableEditBahan.setRowHeight(25);
+        styleTable(tableEditBahan);
+        tableEditBahan.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        tableEditBahan.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
+        tableEditBahan.setRowHeight(30);
         panelBahan.add(new JScrollPane(tableEditBahan), BorderLayout.CENTER);
 
         panelEdit.add(panelBahan, BorderLayout.CENTER);
@@ -384,7 +446,7 @@ public class dapur extends JFrame {
     private JPanel createInputPesananPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
+
 
         // 1. Header (Atas)
         JPanel panelHeader = new JPanel(new GridLayout(3, 2, 10, 10));
@@ -410,7 +472,7 @@ public class dapur extends JFrame {
 
         panelHeader.add(new JLabel("Tanggal Masak:"));
         panelHeader.add(datePicker);
-        
+
         panel.add(panelHeader, BorderLayout.NORTH);
 
         // 2. Form Input Bahan (Tengah)
@@ -438,39 +500,70 @@ public class dapur extends JFrame {
         String[] colKeranjang = {"No", "Nama Bahan", "Jumlah Diminta", "Satuan"};
         modelKeranjang = new DefaultTableModel(colKeranjang, 0);
         tableKeranjang = new JTable(modelKeranjang);
+        styleTable(tableKeranjang);
+        tableKeranjang.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        tableKeranjang.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12));
+        tableKeranjang.setRowHeight(30);
         panelTengah.add(new JScrollPane(tableKeranjang), BorderLayout.CENTER);
 
         panel.add(panelTengah, BorderLayout.CENTER);
 
         // 3. Tombol Aksi (Bawah)
         JPanel panelBawah = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+        // --- TOMBOL RESET (Gaya Merah) ---
         JButton btnReset = new JButton("Reset Form");
         btnReset.addActionListener(e -> resetForm());
-        JButton btnKirim = new JButton("Kirim Permintaan");
-        btnKirim.setBackground(new Color(0, 128, 0)); 
-        btnKirim.setForeground(Color.WHITE);
-        btnKirim.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btnKirim.setFocusPainted(false);     
-        btnKirim.setBorderPainted(false);    
-        btnKirim.setOpaque(true);     
-        btnKirim.setContentAreaFilled(true); 
 
-        // Hover effect
-        btnKirim.addMouseListener(new java.awt.event.MouseAdapter() {
+        // Styling Reset
+        btnReset.setBackground(new Color(220, 53, 69)); // Warna Merah
+        btnReset.setForeground(Color.WHITE);
+        btnReset.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnReset.setFocusPainted(false);
+        btnReset.setBorderPainted(false);
+        btnReset.setOpaque(true);
+        btnReset.setContentAreaFilled(true);
+
+        // Hover Effect Reset (Menjadi lebih gelap saat kursor masuk)
+        btnReset.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                btnKirim.setBackground(new Color(0, 160, 0)); 
+                btnReset.setBackground(new Color(200, 40, 55)); // Merah lebih gelap
             }
 
             @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                btnKirim.setBackground(new Color(0, 128, 0)); 
+                btnReset.setBackground(new Color(220, 53, 69)); // Kembali ke merah awal
             }
         });
 
+        // --- TOMBOL KIRIM (Gaya Hijau) ---
+        JButton btnKirim = new JButton("Kirim Permintaan");
         btnKirim.addActionListener(e -> kirimPermintaan());
 
+        // Styling Kirim
+        btnKirim.setBackground(new Color(40, 167, 69)); // Warna Hijau
+        btnKirim.setForeground(Color.WHITE);
+        btnKirim.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btnKirim.setFocusPainted(false);
+        btnKirim.setBorderPainted(false);
+        btnKirim.setOpaque(true);
+        btnKirim.setContentAreaFilled(true);
 
+        // Hover Effect Kirim
+        btnKirim.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btnKirim.setBackground(new Color(33, 136, 56)); // Hijau lebih gelap
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btnKirim.setBackground(new Color(40, 167, 69)); // Kembali ke hijau awal
+            }
+        });
+
+        // Tambahkan ke panel (Reset di kiri, Kirim di kanan)
         panelBawah.add(btnReset);
         panelBawah.add(btnKirim);
 
