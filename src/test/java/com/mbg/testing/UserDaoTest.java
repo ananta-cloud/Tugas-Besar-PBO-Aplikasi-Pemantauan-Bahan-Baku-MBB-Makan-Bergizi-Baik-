@@ -18,7 +18,7 @@ public class UserDaoTest {
     @BeforeEach
     void setUp() {
         userDao = new UserDao();
-
+        
         // Siapkan user dummy untuk testing
         testUser = new User();
         testUser.setName("User Test JUnit");
@@ -36,7 +36,7 @@ public class UserDaoTest {
             // 1. Simpan User
             System.out.println("Menyimpan user test...");
             User savedUser = userDao.save(testUser);
-
+            
             // Pastikan ID ter-generate (artinya masuk DB)
             Assertions.assertNotNull(savedUser.getId(), "ID User tidak boleh null setelah save");
 
@@ -47,13 +47,13 @@ public class UserDaoTest {
             // 3. Verifikasi Data
             Assertions.assertNotNull(foundUser, "User harus ditemukan di database");
             Assertions.assertEquals("User Test JUnit", foundUser.getName());
-
+            
             // Cek Password
             boolean passMatch = BCrypt.checkpw("password123", foundUser.getPassword());
             Assertions.assertTrue(passMatch, "Password harus valid");
 
             System.out.println("Test CRUD User Berhasil. ID Baru: " + savedUser.getId());
-
+            
             // Simpan ID untuk cleanup
             testUser.setId(savedUser.getId());
 

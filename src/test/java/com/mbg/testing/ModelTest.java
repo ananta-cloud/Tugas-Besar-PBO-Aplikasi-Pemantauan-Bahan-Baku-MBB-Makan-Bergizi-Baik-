@@ -30,7 +30,7 @@ public class ModelTest {
         Assertions.assertEquals(50, bahan.getJumlah());
         Assertions.assertEquals("kg", bahan.getSatuan());
         Assertions.assertEquals("tersedia", bahan.getStatus());
-
+        
         System.out.println("Test Model BahanBaku Berhasil.");
     }
 }
