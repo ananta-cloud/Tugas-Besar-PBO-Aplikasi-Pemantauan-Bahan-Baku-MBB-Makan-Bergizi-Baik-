@@ -31,7 +31,7 @@ public class Permintaan {
     @Column(name = "created_at")
     private Timestamp createdAt;
 
-    // Properti Transient (Tidak disimpan langsung ke tabel permintaan, tapi untuk relasi di Java)
+    // Properti Transient (Tidak disimpan langsung ke tabel permintaan, tapi untuk relasi)
     @Transient
     private User pemohon;
     

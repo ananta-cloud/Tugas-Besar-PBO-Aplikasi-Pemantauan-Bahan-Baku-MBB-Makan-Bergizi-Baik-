@@ -28,7 +28,7 @@ public class BahanBaku {
     @Column(name = "created_at")
     private Timestamp createdAt;
 
-    // Getters and Setters (Ringkas)
+    // Getters and Setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
     public String getNama() { return nama; }

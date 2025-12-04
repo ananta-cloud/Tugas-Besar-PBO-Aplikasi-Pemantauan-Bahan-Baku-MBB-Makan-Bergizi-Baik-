@@ -20,7 +20,7 @@ public class PermintaanDaoTest {
     static void init() {
         permintaanDao = new PermintaanDao();
         permintaan = new Permintaan();
-        permintaan.setPemohonId(1); // Asumsi User ID 1 ada (Admin/Seeder)
+        permintaan.setPemohonId(1);
         permintaan.setMenuMakan("Nasi Goreng Test");
         permintaan.setJumlahPorsi(100);
         permintaan.setTglMasak(Date.valueOf(LocalDate.now().plusDays(1)));

@@ -1,14 +1,15 @@
 package com.mbg.testing;
 
-import com.mbg.dao.UserDao;
-import com.mbg.model.User;
+import java.sql.Timestamp;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mindrot.jbcrypt.BCrypt;
 
-import java.sql.Timestamp;
+import com.mbg.dao.UserDao;
+import com.mbg.model.User;
 
 public class UserDaoTest {
 
@@ -19,11 +20,11 @@ public class UserDaoTest {
     void setUp() {
         userDao = new UserDao();
         
-        // Siapkan user dummy untuk testing
+        // User dummy untuk testing
         testUser = new User();
         testUser.setName("User Test JUnit");
         testUser.setEmail("junit.test@mbg.id");
-        // Hash password seperti aplikasi asli
+        // Hash password
         String hashedPass = BCrypt.hashpw("password123", BCrypt.gensalt());
         testUser.setPassword(hashedPass);
         testUser.setRole("gudang");
@@ -37,7 +38,7 @@ public class UserDaoTest {
             System.out.println("Menyimpan user test...");
             User savedUser = userDao.save(testUser);
             
-            // Pastikan ID ter-generate (artinya masuk DB)
+            // Pastikan ID ter-generate
             Assertions.assertNotNull(savedUser.getId(), "ID User tidak boleh null setelah save");
 
             // 2. Cari User berdasarkan Email

@@ -1,10 +1,10 @@
 package com.mbg.pattern.observer;
 
 /**
- * Observer Interface - Behavioral Pattern
- * Mendefinisikan kontrak untuk semua observer yang ingin menerima notifikasi
- * dari subject ketika ada perubahan data.
- */
+  Observer Interface - Behavioral Pattern
+  Mendefinisikan kontrak untuk semua observer yang ingin menerima notifikasi
+  dari subject ketika ada perubahan data.
+**/
 public interface Observer {
     
     /**

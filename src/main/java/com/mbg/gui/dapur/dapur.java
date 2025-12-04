@@ -29,33 +29,30 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.Timer;
 import javax.swing.UIManager;
-import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 
-import org.jdatepicker.impl.JDatePickerImpl;
 import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
 import org.jdatepicker.impl.UtilDateModel;
-
-import com.mbg.pattern.command.Command;
-import com.mbg.pattern.command.CreateRequestCommand;
-import com.mbg.pattern.command.EditRequestCommand;
-import com.mbg.pattern.command.CancelRequestCommand;
-import com.mbg.pattern.command.CommandInvoker;
 
 import com.mbg.dao.BahanBakuDao;
 import com.mbg.dao.PermintaanDao;
 import com.mbg.dao.PermintaanDetailDao;
+import com.mbg.helper.DateLabelFormatter;
 import com.mbg.model.BahanBaku;
 import com.mbg.model.Permintaan;
 import com.mbg.model.PermintaanDetail;
 import com.mbg.model.User;
-import com.mbg.helper.DateLabelFormatter;
+import com.mbg.pattern.command.CancelRequestCommand;
+import com.mbg.pattern.command.Command;
+import com.mbg.pattern.command.CommandInvoker;
+import com.mbg.pattern.command.CreateRequestCommand;
+import com.mbg.pattern.command.EditRequestCommand;
 
 public class dapur extends JFrame {
 
@@ -105,13 +102,12 @@ public class dapur extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Gunakan BorderLayout untuk Frame utama
         setLayout(new BorderLayout());
 
-        // 1. Tambahkan Header (Info User & Tombol Logout)
+        // Header (Info User & Tombol Logout)
         add(createHeaderPanel(), BorderLayout.NORTH);
 
-        // 2. Setup TabbedPane
+        // Setup TabbedPane
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("SansSerif", Font.BOLD, 14));
 
@@ -128,11 +124,9 @@ public class dapur extends JFrame {
             int selectedIndex = tabbedPane.getSelectedIndex();
             for (int i = 0; i < tabbedPane.getTabCount(); i++) {
                 if (i == selectedIndex) {
-                    // Tab Aktif: Biru, Teks Putih
                     tabbedPane.setBackgroundAt(i, new Color(0, 166, 255));
                     tabbedPane.setForegroundAt(i, new Color(104, 1, 1));
                 } else {
-                    // Tab Tidak Aktif: Putih, Teks Hitam
                     tabbedPane.setBackgroundAt(i, Color.WHITE);
                     tabbedPane.setForegroundAt(i, Color.BLACK);
                 }
@@ -140,7 +134,7 @@ public class dapur extends JFrame {
         };
 
         tabbedPane.addChangeListener(e -> updateTabColors.run());
-        updateTabColors.run(); // Jalankan sekali di awal
+        updateTabColors.run();
 
         add(tabbedPane, BorderLayout.CENTER);
     }
@@ -148,7 +142,7 @@ public class dapur extends JFrame {
     // ========== HEADER & LOGOUT ==========
     private JPanel createHeaderPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(new Color(245, 245, 245)); // Background abu muda
+        panel.setBackground(new Color(245, 245, 245));
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY),
                 BorderFactory.createEmptyBorder(10, 15, 10, 15)
@@ -164,7 +158,7 @@ public class dapur extends JFrame {
         // Tombol Logout (Kanan)
         JButton btnLogout = new JButton("Logout");
         btnLogout.setPreferredSize(new Dimension(100, 35));
-        btnLogout.setBackground(new Color(220, 53, 69)); // Merah
+        btnLogout.setBackground(new Color(220, 53, 69));
         btnLogout.setForeground(Color.WHITE);
         btnLogout.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnLogout.setFocusPainted(false);
@@ -193,8 +187,8 @@ public class dapur extends JFrame {
                 JOptionPane.QUESTION_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            this.dispose(); // Tutup window saat ini
-            new com.mbg.MainApp().setVisible(true); // Kembali ke Login
+            this.dispose();
+            new com.mbg.MainApp().setVisible(true);
         }
     }
 
@@ -302,12 +296,6 @@ public class dapur extends JFrame {
 
     private void showDetailBahan(int row) {
         try {
-            Integer pesananId = (Integer) modelPesanan.getValueAt(row, 0); // No sebenarnya bukan ID, tapi untuk simplifikasi kita anggap urutan
-            // NOTE: Logic pengambilan ID di atas mungkin perlu disesuaikan jika kolom 'No' bukan ID Database.
-            // Ambil objek asli dari list terfilter untuk keamanan ID
-            // ... (Kode simplified, asumsi ID tersimpan)
-            // Untuk memastikan, mari ambil Permintaan dari database berdasarkan kriteria unik atau simpan ID hidden.
-            // Di sini kita ambil dari allPesanan yang cocok (simplified approach):
             Permintaan pesanan = allPesanan.stream().filter(p ->
                     p.getMenuMakan().equals(modelPesanan.getValueAt(row, 2)) &&
                             p.getJumlahPorsi().toString().equals(modelPesanan.getValueAt(row, 3).toString())
@@ -414,7 +402,7 @@ public class dapur extends JFrame {
         JButton btnSimpan = new JButton("Simpan Perubahan");
         btnSimpan.addActionListener(e -> {
             try {
-                // Buat copy permintaan lama untuk undo
+                // Copy permintaan lama untuk undo
                 Permintaan oldPermintaan = new Permintaan();
                 oldPermintaan.setId(pesanan.getId());
                 oldPermintaan.setMenuMakan(pesanan.getMenuMakan());
@@ -451,7 +439,7 @@ public class dapur extends JFrame {
             }
         });
 
-        // TOMBOL UNDO/REDO
+        // Tombol Undo/Redo
         JButton btnUndo = new JButton("↶ Undo");
         btnUndo.addActionListener(e -> {
             try {
@@ -488,12 +476,12 @@ public class dapur extends JFrame {
         }
     }
 
-    // ========== INPUT PESANAN TAB (GRID BAG LAYOUT) ==========
+    // ========== INPUT PESANAN TAB ==========
     private JPanel createInputPesananPanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // 1. Header (Form Detail)
+        // Header (Form Detail)
         JPanel panelHeader = new JPanel(new GridBagLayout());
         panelHeader.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createEtchedBorder(), " Detail Masakan ",
@@ -538,7 +526,7 @@ public class dapur extends JFrame {
 
         panel.add(panelHeader, BorderLayout.NORTH);
 
-        // 2. Input Bahan (Tengah)
+        // Input Bahan
         JPanel panelTengah = new JPanel(new BorderLayout(10, 10));
         panelTengah.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createEtchedBorder(), " Daftar Bahan yang Dibutuhkan ",
@@ -582,7 +570,7 @@ public class dapur extends JFrame {
 
         panel.add(panelTengah, BorderLayout.CENTER);
 
-        // 3. Tombol Aksi (Bawah - Flat Style)
+        // Tombol Aksi
         JPanel panelBawah = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
 
         JButton btnReset = new JButton("Reset Form");
@@ -720,9 +708,7 @@ public class dapur extends JFrame {
 
     private void startAutoRefresh() {
         refreshTimer = new Timer(5000, e -> {
-            // Cek apakah tab aktif adalah dashboard (index 0)
             JTabbedPane tabbedPane = null;
-            // Cari tabbedPane di komponen
             for(java.awt.Component comp : getContentPane().getComponents()) {
                 if(comp instanceof JTabbedPane) {
                     tabbedPane = (JTabbedPane) comp;

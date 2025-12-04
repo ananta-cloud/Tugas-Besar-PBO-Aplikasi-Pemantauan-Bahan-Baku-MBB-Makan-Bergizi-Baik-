@@ -1,12 +1,27 @@
 package com.mbg;
 
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+
+import com.codeway.daoTemplate.utils.TemplateLogger;
 import com.mbg.dao.UserDao;
 import com.mbg.model.User;
-import com.codeway.daoTemplate.utils.TemplateLogger;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
 
 public class MainApp extends JFrame {
 
@@ -84,7 +99,7 @@ public class MainApp extends JFrame {
     private void handleLogin(ActionEvent e) {
         String email = txtEmail.getText().trim();
 
-        // Validasi input kosong saja
+        // Validasi input kosong
         if (email.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Harap isi Email!", "Peringatan", JOptionPane.WARNING_MESSAGE);
             return;
@@ -111,7 +126,7 @@ public class MainApp extends JFrame {
     }
 
     private void bukaDashboard(@org.jetbrains.annotations.NotNull User user) {
-        this.dispose(); // Tutup Login
+        this.dispose();
 
         String role = user.getRole();
         if (role == null) role = "";

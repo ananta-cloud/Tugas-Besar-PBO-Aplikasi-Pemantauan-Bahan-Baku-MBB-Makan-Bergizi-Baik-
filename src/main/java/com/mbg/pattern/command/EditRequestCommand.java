@@ -1,34 +1,26 @@
 package com.mbg.pattern.command;
 
+import java.util.List;
+
 import com.mbg.dao.PermintaanDao;
 import com.mbg.dao.PermintaanDetailDao;
 import com.mbg.model.Permintaan;
 import com.mbg.model.PermintaanDetail;
-import java.util.List;
 
 /**
- * EditRequestCommand - Command untuk mengedit permintaan yang sudah ada
- * Mengimplementasikan Command interface untuk menangani aksi edit permintaan
- * Mendukung undo untuk mengembalikan data ke state sebelumnya
- */
+  EditRequestCommand - Command untuk mengedit permintaan yang sudah ada
+
+**/
 public class EditRequestCommand implements Command {
 
     private PermintaanDao permintaanDao;
     private PermintaanDetailDao detailDao;
     private Permintaan permintaan;
-    private Permintaan oldPermintaan; // Backup untuk undo
+    private Permintaan oldPermintaan; 
     private List<PermintaanDetail> newDetails;
-    private List<PermintaanDetail> oldDetails; // Backup untuk undo
+    private List<PermintaanDetail> oldDetails; 
 
-    /**
-     * Constructor
-     * 
-     * @param permintaanDao DAO untuk permintaan
-     * @param detailDao DAO untuk detail permintaan
-     * @param permintaan Permintaan yang sudah diupdate (state baru)
-     * @param oldPermintaan Backup permintaan sebelum edit (state lama)
-     * @param newDetails List detail bahan yang baru
-     */
+    // Constructor
     public EditRequestCommand(PermintaanDao permintaanDao, PermintaanDetailDao detailDao,
                                Permintaan permintaan, Permintaan oldPermintaan,
                                List<PermintaanDetail> newDetails) {
@@ -39,10 +31,7 @@ public class EditRequestCommand implements Command {
         this.newDetails = newDetails;
     }
 
-    /**
-     * Mengeksekusi update permintaan
-     * Update data permintaan dan hapus detail lama, kemudian simpan detail baru
-     */
+    // Mengeksekusi update permintaan
     @Override
     public void execute() throws Exception {
         System.out.println("[EditRequestCommand] Executing edit on request ID " + permintaan.getId());
@@ -65,10 +54,7 @@ public class EditRequestCommand implements Command {
         System.out.println("[EditRequestCommand] Permintaan berhasil diupdate");
     }
 
-    /**
-     * Membatalkan edit permintaan
-     * Kembalikan data permintaan ke state lama dan restore detail yang lama
-     */
+    // Membatalkan edit permintaan
     @Override
     public void undo() throws Exception {
         System.out.println("[EditRequestCommand] Undoing edit on request ID " + permintaan.getId());

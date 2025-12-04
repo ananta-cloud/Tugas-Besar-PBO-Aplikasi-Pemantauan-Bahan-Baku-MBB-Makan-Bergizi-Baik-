@@ -1,32 +1,25 @@
 package com.mbg.pattern.command;
 
+import java.util.List;
+
 import com.mbg.dao.PermintaanDao;
 import com.mbg.dao.PermintaanDetailDao;
 import com.mbg.model.Permintaan;
 import com.mbg.model.PermintaanDetail;
-import java.util.List;
 
 /**
- * CreateRequestCommand - Command untuk membuat permintaan baru
- * Mengimplementasikan Command interface untuk menangani aksi pembuatan permintaan
- * Mendukung undo untuk menghapus permintaan yang baru dibuat
- */
+ CreateRequestCommand - Command untuk membuat permintaan baru
+**/
 public class CreateRequestCommand implements Command {
 
     private PermintaanDao permintaanDao;
     private PermintaanDetailDao detailDao;
     private Permintaan permintaan;
     private List<PermintaanDetail> details;
-    private Integer savedPermintaanId; // Untuk undo
+    private Integer savedPermintaanId;
 
-    /**
-     * Constructor
-     * 
-     * @param permintaanDao DAO untuk permintaan
-     * @param detailDao DAO untuk detail permintaan
-     * @param permintaan Permintaan yang akan dibuat
-     * @param details List detail bahan yang diminta
-     */
+    // Constructor
+
     public CreateRequestCommand(PermintaanDao permintaanDao, PermintaanDetailDao detailDao,
                                  Permintaan permintaan, List<PermintaanDetail> details) {
         this.permintaanDao = permintaanDao;
@@ -35,10 +28,7 @@ public class CreateRequestCommand implements Command {
         this.details = details;
     }
 
-    /**
-     * Mengeksekusi pembuatan permintaan
-     * Simpan permintaan ke database, kemudian simpan setiap detail bahan
-     */
+    // Mengeksekusi pembuatan permintaan
     @Override
     public void execute() throws Exception {
         System.out.println("[CreateRequestCommand] Executing...");
@@ -57,9 +47,9 @@ public class CreateRequestCommand implements Command {
     }
 
     /**
-     * Membatalkan pembuatan permintaan
-     * Hapus semua detail bahan, kemudian hapus permintaan
-     */
+      Membatalkan pembuatan permintaan
+      Hapus semua detail bahan, kemudian hapus permintaan
+    **/
     @Override
     public void undo() throws Exception {
         if (savedPermintaanId != null) {

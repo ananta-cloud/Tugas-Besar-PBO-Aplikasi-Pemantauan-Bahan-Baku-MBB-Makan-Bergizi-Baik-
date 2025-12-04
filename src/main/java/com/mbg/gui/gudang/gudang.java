@@ -1,7 +1,31 @@
 package com.mbg.gui.gudang;
 
-import com.mbg.pattern.observer.Observer;
-import com.mbg.pattern.observer.PermintaanSubject;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.UIManager;
+import javax.swing.table.DefaultTableModel;
 
 import com.mbg.dao.BahanBakuDao;
 import com.mbg.dao.PermintaanDao;
@@ -11,14 +35,8 @@ import com.mbg.model.BahanBaku;
 import com.mbg.model.Permintaan;
 import com.mbg.model.PermintaanDetail;
 import com.mbg.model.User;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.sql.Date;
-import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.util.List;
+import com.mbg.pattern.observer.Observer;
+import com.mbg.pattern.observer.PermintaanSubject;
 
 public class gudang extends JFrame implements Observer {
 
@@ -44,7 +62,6 @@ public class gudang extends JFrame implements Observer {
     public gudang(User user) {
         this.loggedInUser = user;
 
-        // Inisialisasi DAO
         this.bahanDao = new BahanBakuDao();
         this.permintaanDao = new PermintaanDao();
         this.detailDao = new PermintaanDetailDao();
@@ -80,13 +97,12 @@ public class gudang extends JFrame implements Observer {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Gunakan BorderLayout untuk Frame utama
         setLayout(new BorderLayout());
 
-        // 1. Tambahkan Header (Info User & Tombol Logout)
+        // Header (Info User & Tombol Logout)
         add(createHeaderPanel(), BorderLayout.NORTH);
 
-        // 2. Setup TabbedPane
+        // Setup TabbedPane
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("SansSerif", Font.BOLD, 14));
 
@@ -103,11 +119,9 @@ public class gudang extends JFrame implements Observer {
             int selectedIndex = tabbedPane.getSelectedIndex();
             for (int i = 0; i < tabbedPane.getTabCount(); i++) {
                 if (i == selectedIndex) {
-                    // Tab Aktif: Biru, Teks Putih
                     tabbedPane.setBackgroundAt(i, new Color(0, 166, 255));
                     tabbedPane.setForegroundAt(i, new Color(104, 0, 0));
                 } else {
-                    // Tab Tidak Aktif: Putih, Teks Hitam
                     tabbedPane.setBackgroundAt(i, Color.WHITE);
                     tabbedPane.setForegroundAt(i, Color.BLACK);
                 }
@@ -115,31 +129,30 @@ public class gudang extends JFrame implements Observer {
         };
 
         tabbedPane.addChangeListener(e -> updateTabColors.run());
-        updateTabColors.run(); // Jalankan sekali di awal
+        updateTabColors.run();
 
-        // Tambahkan TabbedPane ke Center
         add(tabbedPane, BorderLayout.CENTER);
     }
 
     // ========== HEADER & LOGOUT ==========
     private JPanel createHeaderPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(new Color(245, 245, 245)); // Background abu muda
+        panel.setBackground(new Color(245, 245, 245));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
         panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY), // Garis bawah
-                BorderFactory.createEmptyBorder(10, 15, 10, 15) // Padding
+                BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY),
+                BorderFactory.createEmptyBorder(10, 15, 10, 15)
         ));
 
         // Info User (Kiri)
         JLabel lblUser = new JLabel("Selamat Datang, " + (loggedInUser != null ? loggedInUser.getName() : "Admin"));
         lblUser.setFont(new Font("SansSerif", Font.BOLD, 16));
         lblUser.setForeground(Color.DARK_GRAY);
-        lblUser.setIcon(UIManager.getIcon("FileView.computerIcon")); // Icon user default (opsional)
+        lblUser.setIcon(UIManager.getIcon("FileView.computerIcon"));
         panel.add(lblUser, BorderLayout.WEST);
 
         // Tombol Logout (Kanan)
-        JButton btnLogout = createFlatButton("Logout", new Color(220, 53, 69)); // Warna Merah
+        JButton btnLogout = createFlatButton("Logout", new Color(220, 53, 69));
         btnLogout.setPreferredSize(new Dimension(100, 35));
         btnLogout.addActionListener(e -> handleLogout());
         panel.add(btnLogout, BorderLayout.EAST);
@@ -155,8 +168,8 @@ public class gudang extends JFrame implements Observer {
                 JOptionPane.QUESTION_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            this.dispose(); // Tutup window saat ini
-            new com.mbg.MainApp().setVisible(true); // Kembali ke Login
+            this.dispose();
+            new com.mbg.MainApp().setVisible(true);
         }
     }
 
@@ -237,8 +250,8 @@ public class gudang extends JFrame implements Observer {
         cmbStatus = new JComboBox<>(new String[]{"tersedia", "segera_kadaluarsa", "kadaluarsa", "habis"});
         panelInput.add(cmbStatus);
 
-        panelInput.add(new JLabel("")); // Spacer
-        panelInput.add(new JLabel("")); // Spacer
+        panelInput.add(new JLabel(""));
+        panelInput.add(new JLabel("")); 
 
         panel.add(panelInput, BorderLayout.CENTER);
 
@@ -441,9 +454,7 @@ public class gudang extends JFrame implements Observer {
         };
         tablePermintaan = new JTable(modelPermintaan);
 
-        // --- TERAPKAN STYLE TABEL DI SINI ---
         styleTable(tablePermintaan);
-        // ------------------------------------
 
         tablePermintaan.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -468,7 +479,7 @@ public class gudang extends JFrame implements Observer {
         txtDetailPermintaan.setFont(new Font("Monospaced", Font.PLAIN, 12));
         panelKanan.add(new JScrollPane(txtDetailPermintaan), BorderLayout.CENTER);
 
-        // Tombol Aksi (Dengan Style Flat)
+        // Tombol Aksi
         JPanel panelAksi = new JPanel(new GridLayout(2, 1, 5, 5));
 
         JButton btnSetuju = createFlatButton("✓ Setujui Permintaan", new Color(34, 139, 34));
@@ -604,7 +615,7 @@ public class gudang extends JFrame implements Observer {
                 p.setStatus(status);
                 permintaanDao.update(p);
 
-                // TAMBAH: Notify observers
+                // Notify observers
                 permintaanSubject.notifyObservers("PERMINTAAN_DIUPDATE", p);
 
                 // Jika disetujui, kurangi stok bahan
@@ -640,21 +651,17 @@ public class gudang extends JFrame implements Observer {
 
     // --- HELPER METHOD: STYLE TABEL (ISI & HEADER RATA TENGAH + FONT 12) ---
     private void styleTable(JTable table) {
-        // 1. Set Font & Row Height
         table.setFont(new Font("SansSerif", Font.PLAIN, 12));
         table.setRowHeight(30);
-
-        // 2. Setup Renderer untuk ISI TABEL (Rata Tengah)
+    
         javax.swing.table.DefaultTableCellRenderer centerRenderer = new javax.swing.table.DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(javax.swing.JLabel.CENTER);
 
-        // 3. Setup Renderer untuk HEADER TABEL (Rata Tengah + Bold)
         javax.swing.table.DefaultTableCellRenderer headerRenderer = new javax.swing.table.DefaultTableCellRenderer() {
             @Override
             public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 
-                // Set Style Header
                 setFont(new Font("SansSerif", Font.BOLD, 12));
                 setHorizontalAlignment(javax.swing.JLabel.CENTER);
                 setBackground(new Color(230, 230, 230));
@@ -665,14 +672,12 @@ public class gudang extends JFrame implements Observer {
             }
         };
 
-        // 4. Terapkan Renderer ke Setiap Kolom
         for (int i = 0; i < table.getColumnCount(); i++) {
             table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
             table.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
         }
     }
 
-    // --- HELPER METHOD: CREATE FLAT BUTTON ---
     private JButton createFlatButton(String text, Color bgColor) {
         JButton btn = new JButton(text);
         btn.setPreferredSize(new Dimension(120, 35));

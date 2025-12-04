@@ -1,18 +1,19 @@
 package com.mbg.testing;
 
-import com.mbg.config.MBGDataSource;
+import java.sql.Connection;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.sql.Connection;
+import com.mbg.config.MBGDataSource;
 
 public class DatabaseConnectionTest {
 
     @Test
     @DisplayName("Tes Koneksi ke Database MySQL")
     void testConnection() {
-        MBGDataSource dataSource = new MBGDataSource();
+        MBGDataSource dataSource =  MBGDataSource.getInstance();
         try (Connection connection = dataSource.getConnection()) {
             System.out.println("Mencoba terhubung ke database...");
             

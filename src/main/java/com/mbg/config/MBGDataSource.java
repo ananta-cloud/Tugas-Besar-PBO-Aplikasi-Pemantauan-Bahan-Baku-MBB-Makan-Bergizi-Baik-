@@ -1,36 +1,27 @@
 package com.mbg.config;
 
-import com.codeway.daoTemplate.utils.TemplateConfiguration;
-import com.codeway.daoTemplate.utils.TemplateDataSource;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+import com.codeway.daoTemplate.utils.TemplateConfiguration;
+import com.codeway.daoTemplate.utils.TemplateDataSource;
+
 /**
- * MBGDataSource - Singleton Pattern Implementation
- * Memastikan hanya ada satu instance koneksi database selama aplikasi berjalan.
- * Singleton pattern digunakan untuk:
- * - Efisiensi sumber daya (hanya 1 koneksi)
- * - Konsistensi data di seluruh modul
- * - Manajemen transaksi terpusat
- */
+ MBGDataSource - Singleton Pattern Implementation
+ Memastikan hanya ada satu instance koneksi database selama aplikasi berjalan.
+**/
 public class MBGDataSource implements TemplateDataSource {
 
     private static MBGDataSource instance;
     private Connection connection;
 
-    /**
-     * Private constructor untuk mencegah instantiasi dari luar
-     */
-    public MBGDataSource() {
+
+    // Private constructor untuk mencegah instansiasi dari luar
+    private MBGDataSource() {
     }
 
-    /**
-     * Method untuk mendapatkan instance Singleton
-     * Thread-safe double-checked locking
-     * 
-     * @return instance MBGDataSource yang unik
-     */
+    // Method untuk mendapatkan instance Singleton
     public static synchronized MBGDataSource getInstance() {
         if (instance == null) {
             instance = new MBGDataSource();
@@ -38,17 +29,10 @@ public class MBGDataSource implements TemplateDataSource {
         return instance;
     }
 
-    /**
-     * Mendapatkan koneksi database
-     * Setiap kali dipanggil, membuat koneksi baru (tidak cache)
-     * 
-     * @return Connection object
-     * @throws Exception jika driver tidak ditemukan atau koneksi gagal
-     */
     @Override
     public Connection getConnection() throws Exception {
         try {
-            // Memuat driver database
+            // Memuat database
             Class.forName(TemplateConfiguration.getString("driverClassName"));
             
             // Membuat koneksi baru
@@ -66,11 +50,7 @@ public class MBGDataSource implements TemplateDataSource {
         }
     }
 
-    /**
-     * Menutup koneksi database
-     * 
-     * @param con Connection yang akan ditutup
-     */
+    // Menutup koneksi database
     @Override
     public void closeConnection(Connection con) {
         if (con != null) {
@@ -84,9 +64,7 @@ public class MBGDataSource implements TemplateDataSource {
         }
     }
 
-    /**
-     * Method untuk reset instance (opsional, untuk testing)
-     */
+    // Method untuk reset instance (opsional, untuk testing)
     public static synchronized void resetInstance() {
         if (instance != null && instance.connection != null) {
             try {

@@ -42,7 +42,7 @@ public class BahanBakuDaoTest {
     @DisplayName("Update Stok Bahan")
     void testUpdateBahan() throws Exception {
         BahanBaku b = bahanDao.get(bahanId);
-        b.setJumlah(25); // Kurangi stok
+        b.setJumlah(25);
         bahanDao.update(b);
 
         BahanBaku updated = bahanDao.get(bahanId);

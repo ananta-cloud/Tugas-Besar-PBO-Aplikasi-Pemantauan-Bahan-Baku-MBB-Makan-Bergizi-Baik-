@@ -5,34 +5,26 @@ import java.util.List;
 import java.util.Stack;
 
 /**
- * CommandInvoker - Invoker dalam Command Pattern
- * Bertanggung jawab untuk:
- * - Mengeksekusi command
- * - Menyimpan history command yang telah dijalankan
- * - Melakukan undo/redo terhadap command
- */
+  CommandInvoker - Invoker dalam Command Pattern
+  Berfungsi untuk:
+  - Mengeksekusi command
+  - Menyimpan history command yang telah dijalankan
+  - Melakukan undo/redo terhadap command
+**/
 public class CommandInvoker {
 
     private Stack<Command> undoStack;
     private Stack<Command> redoStack;
     private List<Command> commandHistory;
 
-    /**
-     * Constructor
-     * Inisialisasi stack untuk undo/redo dan history command
-     */
+    // Constructor
+
     public CommandInvoker() {
         this.undoStack = new Stack<>();
         this.redoStack = new Stack<>();
         this.commandHistory = new ArrayList<>();
     }
 
-    /**
-     * Mengeksekusi command dan menyimpannya ke undo stack
-     * 
-     * @param command Command yang akan dieksekusi
-     * @throws Exception jika terjadi error saat eksekusi
-     */
     public void executeCommand(Command command) throws Exception {
         try {
             System.out.println("\n[CommandInvoker] Executing: " + command.getDescription());
@@ -58,12 +50,7 @@ public class CommandInvoker {
         }
     }
 
-    /**
-     * Melakukan undo terhadap command terakhir
-     * Mengembalikan aplikasi ke state sebelum command dijalankan
-     * 
-     * @throws Exception jika undo stack kosong atau error saat undo
-     */
+    // Melakukan undo terhadap command terakhir
     public void undoCommand() throws Exception {
         if (undoStack.isEmpty()) {
             throw new Exception("Tidak ada command yang dapat di-undo");
@@ -90,11 +77,9 @@ public class CommandInvoker {
     }
 
     /**
-     * Melakukan redo terhadap command yang sebelumnya di-undo
-     * Menjalankan kembali command yang telah di-undo
-     * 
-     * @throws Exception jika redo stack kosong atau error saat redo
-     */
+     Melakukan redo terhadap command yang sebelumnya di-undo
+     Menjalankan kembali command yang telah di-undo
+    * */
     public void redoCommand() throws Exception {
         if (redoStack.isEmpty()) {
             throw new Exception("Tidak ada command yang dapat di-redo");
@@ -120,36 +105,24 @@ public class CommandInvoker {
         }
     }
 
-    /**
-     * Mendapatkan history semua command yang telah dijalankan
-     * 
-     * @return List berisi semua command yang telah dijalankan
-     */
+    // Mendapatkan history semua command yang telah dijalankan
     public List<Command> getHistory() {
         return new ArrayList<>(commandHistory);
     }
 
-    /**
-     * Mendapatkan jumlah command yang dapat di-undo
-     * 
-     * @return Ukuran undo stack
-     */
+    
+    // Mendapatkan jumlah command yang dapat di-undo
     public int getUndoCount() {
         return undoStack.size();
     }
 
-    /**
-     * Mendapatkan jumlah command yang dapat di-redo
-     * 
-     * @return Ukuran redo stack
-     */
+    
+    // Mendapatkan jumlah command yang dapat di-redo
     public int getRedoCount() {
         return redoStack.size();
     }
 
-    /**
-     * Menampilkan history command
-     */
+    // Menampilkan history command
     public void printHistory() {
         System.out.println("\n========== COMMAND HISTORY ==========");
         if (commandHistory.isEmpty()) {
@@ -162,9 +135,7 @@ public class CommandInvoker {
         System.out.println("=====================================\n");
     }
 
-    /**
-     * Clear semua history dan stack (untuk reset/logout)
-     */
+    // Clear semua history dan stack (untuk reset/logout)
     public void clearAll() {
         undoStack.clear();
         redoStack.clear();
