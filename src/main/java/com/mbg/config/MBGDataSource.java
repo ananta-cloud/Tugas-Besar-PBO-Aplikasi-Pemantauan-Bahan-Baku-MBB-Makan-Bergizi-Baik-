@@ -22,7 +22,7 @@ public class MBGDataSource implements TemplateDataSource {
     /**
      * Private constructor untuk mencegah instantiasi dari luar
      */
-    private MBGDataSource() {
+    public MBGDataSource() {
     }
 
     /**
