@@ -8,7 +8,7 @@ import com.mbg.model.Permintaan;
 
 public class PermintaanDao extends GenericDaoImpl<Integer, Permintaan> {
     public PermintaanDao() {
-        super(Permintaan.class, new MBGDataSource());
+        super(Permintaan.class, MBGDataSource.getInstance());
     }
     
     public List<Permintaan> getPendingRequests() throws Exception {

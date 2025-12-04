@@ -1,5 +1,8 @@
 package com.mbg.gui.gudang;
 
+import com.mbg.pattern.observer.Observer;
+import com.mbg.pattern.observer.PermintaanSubject;
+
 import com.mbg.dao.BahanBakuDao;
 import com.mbg.dao.PermintaanDao;
 import com.mbg.dao.PermintaanDetailDao;
@@ -17,13 +20,14 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.List;
 
-public class gudang extends JFrame {
+public class gudang extends JFrame implements Observer {
 
     private User loggedInUser;
     private BahanBakuDao bahanDao;
     private PermintaanDao permintaanDao;
     private PermintaanDetailDao detailDao;
     private UserDao userDao;
+    private PermintaanSubject permintaanSubject;
 
     // Tab 1: Kelola Stok Bahan
     private JTable tableStokGudang;
@@ -45,10 +49,29 @@ public class gudang extends JFrame {
         this.permintaanDao = new PermintaanDao();
         this.detailDao = new PermintaanDetailDao();
         this.userDao = new UserDao();
+        this.permintaanSubject = new PermintaanSubject(permintaanDao);
+        this.permintaanSubject.attach(this);
 
         initComponents();
         loadDataStokGudang();
         loadDataPermintaan();
+    }
+
+    @Override
+    public void update(String eventType, Object data) {
+        System.out.println("Dashboard Gudang menerima notifikasi: " + eventType);
+        
+        if ("PERMINTAAN_BARU".equals(eventType)) {
+            JOptionPane.showMessageDialog(this, 
+                    "Ada permintaan baru dari dapur!", 
+                    "Notifikasi", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            loadDataPermintaan();
+        } else if ("PERMINTAAN_DIUPDATE".equals(eventType)) {
+            loadDataPermintaan();
+        } else if ("PERMINTAAN_DIHAPUS".equals(eventType)) {
+            loadDataPermintaan();
+        }
     }
 
     private void initComponents() {
@@ -581,6 +604,9 @@ public class gudang extends JFrame {
                 p.setStatus(status);
                 permintaanDao.update(p);
 
+                // TAMBAH: Notify observers
+                permintaanSubject.notifyObservers("PERMINTAAN_DIUPDATE", p);
+
                 // Jika disetujui, kurangi stok bahan
                 if (status.equals("disetujui")) {
                     List<PermintaanDetail> details = detailDao.getByPermintaanId(permintaanId);
@@ -588,9 +614,8 @@ public class gudang extends JFrame {
                         BahanBaku bahan = bahanDao.get(d.getBahanId());
                         if (bahan != null) {
                             int stokBaru = bahan.getJumlah() - d.getJumlahDiminta();
-                            bahan.setJumlah(Math.max(0, stokBaru)); // Tidak boleh negatif
-
-                            // Update status jika stok habis
+                            bahan.setJumlah(Math.max(0, stokBaru));
+                            
                             if (stokBaru <= 0) {
                                 bahan.setStatus("habis");
                             }
@@ -598,7 +623,7 @@ public class gudang extends JFrame {
                             bahanDao.update(bahan);
                         }
                     }
-                    loadDataStokGudang(); // Refresh stok
+                    loadDataStokGudang();
                 }
 
                 JOptionPane.showMessageDialog(this,
@@ -670,5 +695,13 @@ public class gudang extends JFrame {
         });
 
         return btn;
+    }
+    
+    @Override
+    public void dispose() {
+        if (permintaanSubject != null) {
+            permintaanSubject.detach(this);
+        }
+        super.dispose();
     }
 }
