@@ -42,6 +42,12 @@ import org.jdatepicker.impl.JDatePickerImpl;
 import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.UtilDateModel;
 
+import com.mbg.pattern.command.Command;
+import com.mbg.pattern.command.CreateRequestCommand;
+import com.mbg.pattern.command.EditRequestCommand;
+import com.mbg.pattern.command.CancelRequestCommand;
+import com.mbg.pattern.command.CommandInvoker;
+
 import com.mbg.dao.BahanBakuDao;
 import com.mbg.dao.PermintaanDao;
 import com.mbg.dao.PermintaanDetailDao;
@@ -58,6 +64,7 @@ public class dapur extends JFrame {
     private PermintaanDao permintaanDao;
     private PermintaanDetailDao detailDao;
     private JDatePickerImpl datePicker;
+    private CommandInvoker commandInvoker;
 
     // Dashboard Components
     private JTable tablePesanan;
@@ -86,6 +93,7 @@ public class dapur extends JFrame {
         this.detailDao = new PermintaanDetailDao();
         this.keranjangPermintaan = new ArrayList<>();
         this.allPesanan = new ArrayList<>();
+        this.commandInvoker = new CommandInvoker();
 
         initComponents();
         startAutoRefresh();
@@ -406,18 +414,34 @@ public class dapur extends JFrame {
         JButton btnSimpan = new JButton("Simpan Perubahan");
         btnSimpan.addActionListener(e -> {
             try {
+                // Buat copy permintaan lama untuk undo
+                Permintaan oldPermintaan = new Permintaan();
+                oldPermintaan.setId(pesanan.getId());
+                oldPermintaan.setMenuMakan(pesanan.getMenuMakan());
+                oldPermintaan.setJumlahPorsi(pesanan.getJumlahPorsi());
+
+                // Update data baru
                 pesanan.setMenuMakan(txtEditMenu.getText());
                 pesanan.setJumlahPorsi(Integer.parseInt(txtEditPorsi.getText()));
-                permintaanDao.update(pesanan);
 
-                detailDao.deleteByPermintaanId(pesanan.getId());
+                // Buat list detail baru dari tabel
+                List<PermintaanDetail> newDetails = new ArrayList<>();
                 for (int i = 0; i < modelEditBahan.getRowCount(); i++) {
                     PermintaanDetail d = new PermintaanDetail();
                     d.setPermintaanId(pesanan.getId());
                     d.setBahanId((Integer) modelEditBahan.getValueAt(i, 0));
                     d.setJumlahDiminta((int) modelEditBahan.getValueAt(i, 3));
-                    detailDao.save(d);
+                    newDetails.add(d);
                 }
+
+                Command editCommand = new EditRequestCommand(
+                        permintaanDao, 
+                        detailDao, 
+                        pesanan, 
+                        oldPermintaan,
+                        newDetails
+                );
+                commandInvoker.executeCommand(editCommand);
 
                 JOptionPane.showMessageDialog(dlgEdit, "Pesanan berhasil diupdate!");
                 dlgEdit.dispose();
@@ -426,6 +450,21 @@ public class dapur extends JFrame {
                 JOptionPane.showMessageDialog(dlgEdit, "Gagal menyimpan: " + ex.getMessage());
             }
         });
+
+        // TOMBOL UNDO/REDO
+        JButton btnUndo = new JButton("↶ Undo");
+        btnUndo.addActionListener(e -> {
+            try {
+                commandInvoker.undoCommand();
+                JOptionPane.showMessageDialog(dlgEdit, "Perubahan dibatalkan!");
+                dlgEdit.dispose();
+                loadDataPesanan();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dlgEdit, "Tidak ada aksi yang dapat di-undo");
+            }
+        });
+
+        panelBtnEdit.add(btnUndo);
         panelBtnEdit.add(btnSimpan);
         panelBtnEdit.add(new JButton("Batal") {{ addActionListener(e -> dlgEdit.dispose()); }});
 
@@ -438,9 +477,10 @@ public class dapur extends JFrame {
         int confirm = JOptionPane.showConfirmDialog(this, "Batalkan pesanan ini?", "Konfirmasi", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                pesanan.setStatus("dibatalkan");
-                permintaanDao.update(pesanan);
-                JOptionPane.showMessageDialog(this, "Pesanan dibatalkan!");
+                Command cancelCommand = new CancelRequestCommand(permintaanDao, pesanan);
+                commandInvoker.executeCommand(cancelCommand);
+
+                JOptionPane.showMessageDialog(this, "Pesanan berhasil dibatalkan!");
                 loadDataPesanan();
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this, "Gagal: " + e.getMessage());
@@ -642,19 +682,25 @@ public class dapur extends JFrame {
             p.setJumlahPorsi(Integer.parseInt(txtJumlahPorsi.getText()));
 
             Date selectedDate = (Date) datePicker.getModel().getValue();
-            if (selectedDate != null) p.setTglMasak(selectedDate);
-            else { JOptionPane.showMessageDialog(this, "Pilih tanggal masak!"); return; }
+            if (selectedDate != null) {
+                p.setTglMasak(selectedDate);
+            } else {
+                JOptionPane.showMessageDialog(this, "Pilih tanggal masak!");
+                return;
+            }
 
             p.setStatus("menunggu");
             p.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-            p = permintaanDao.save(p);
 
-            for (PermintaanDetail d : keranjangPermintaan) {
-                d.setPermintaanId(p.getId());
-                detailDao.save(d);
-            }
+            Command createCommand = new CreateRequestCommand(
+                    permintaanDao, 
+                    detailDao, 
+                    p, 
+                    new ArrayList<>(keranjangPermintaan)
+            );
+            commandInvoker.executeCommand(createCommand);
 
-            JOptionPane.showMessageDialog(this, "Sukses! Permintaan ID " + p.getId() + " berhasil dikirim.");
+            JOptionPane.showMessageDialog(this, "Sukses! Permintaan berhasil dikirim.");
             resetForm();
             loadDataPesanan();
 
