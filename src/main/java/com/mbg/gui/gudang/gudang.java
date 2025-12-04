@@ -1,5 +1,8 @@
 package com.mbg.gui.gudang;
 
+import com.mbg.pattern.observer.Observer;
+import com.mbg.pattern.observer.PermintaanSubject;
+
 import com.mbg.dao.BahanBakuDao;
 import com.mbg.dao.PermintaanDao;
 import com.mbg.dao.PermintaanDetailDao;
@@ -17,13 +20,14 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.List;
 
-public class gudang extends JFrame {
+public class gudang extends JFrame implements Observer {
 
     private User loggedInUser;
     private BahanBakuDao bahanDao;
     private PermintaanDao permintaanDao;
     private PermintaanDetailDao detailDao;
     private UserDao userDao;
+    private PermintaanSubject permintaanSubject;
 
     // Tab 1: Kelola Stok Bahan
     private JTable tableStokGudang;
@@ -39,16 +43,35 @@ public class gudang extends JFrame {
 
     public gudang(User user) {
         this.loggedInUser = user;
-
+        
         // Inisialisasi DAO
         this.bahanDao = new BahanBakuDao();
         this.permintaanDao = new PermintaanDao();
         this.detailDao = new PermintaanDetailDao();
         this.userDao = new UserDao();
+        this.permintaanSubject = new PermintaanSubject(permintaanDao);
+        this.permintaanSubject.attach(this);
 
         initComponents();
         loadDataStokGudang();
         loadDataPermintaan();
+    }
+
+    @Override
+    public void update(String eventType, Object data) {
+        System.out.println("Dashboard Gudang menerima notifikasi: " + eventType);
+        
+        if ("PERMINTAAN_BARU".equals(eventType)) {
+            JOptionPane.showMessageDialog(this, 
+                    "Ada permintaan baru dari dapur!", 
+                    "Notifikasi", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            loadDataPermintaan();
+        } else if ("PERMINTAAN_DIUPDATE".equals(eventType)) {
+            loadDataPermintaan();
+        } else if ("PERMINTAAN_DIHAPUS".equals(eventType)) {
+            loadDataPermintaan();
+        }
     }
 
     private void initComponents() {
@@ -57,15 +80,7 @@ public class gudang extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Gunakan BorderLayout untuk Frame utama
-        setLayout(new BorderLayout());
-
-        // 1. Tambahkan Header (Info User & Tombol Logout)
-        add(createHeaderPanel(), BorderLayout.NORTH);
-
-        // 2. Setup TabbedPane
         JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("SansSerif", Font.BOLD, 14));
 
         // Tab 1: Kelola Stok Bahan
         JPanel panelStok = createPanelKelolaStok();
@@ -75,66 +90,7 @@ public class gudang extends JFrame {
         JPanel panelPermintaan = createPanelPermintaan();
         tabbedPane.addTab("Kelola Permintaan", panelPermintaan);
 
-        // --- Logika Pewarnaan Tab ---
-        Runnable updateTabColors = () -> {
-            int selectedIndex = tabbedPane.getSelectedIndex();
-            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
-                if (i == selectedIndex) {
-                    // Tab Aktif: Biru, Teks Putih
-                    tabbedPane.setBackgroundAt(i, new Color(0, 166, 255));
-                    tabbedPane.setForegroundAt(i, new Color(104, 0, 0));
-                } else {
-                    // Tab Tidak Aktif: Putih, Teks Hitam
-                    tabbedPane.setBackgroundAt(i, Color.WHITE);
-                    tabbedPane.setForegroundAt(i, Color.BLACK);
-                }
-            }
-        };
-
-        tabbedPane.addChangeListener(e -> updateTabColors.run());
-        updateTabColors.run(); // Jalankan sekali di awal
-
-        // Tambahkan TabbedPane ke Center
-        add(tabbedPane, BorderLayout.CENTER);
-    }
-
-    // ========== HEADER & LOGOUT ==========
-    private JPanel createHeaderPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(new Color(245, 245, 245)); // Background abu muda
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY), // Garis bawah
-                BorderFactory.createEmptyBorder(10, 15, 10, 15) // Padding
-        ));
-
-        // Info User (Kiri)
-        JLabel lblUser = new JLabel("Selamat Datang, " + (loggedInUser != null ? loggedInUser.getName() : "Admin"));
-        lblUser.setFont(new Font("SansSerif", Font.BOLD, 16));
-        lblUser.setForeground(Color.DARK_GRAY);
-        lblUser.setIcon(UIManager.getIcon("FileView.computerIcon")); // Icon user default (opsional)
-        panel.add(lblUser, BorderLayout.WEST);
-
-        // Tombol Logout (Kanan)
-        JButton btnLogout = createFlatButton("Logout", new Color(220, 53, 69)); // Warna Merah
-        btnLogout.setPreferredSize(new Dimension(100, 35));
-        btnLogout.addActionListener(e -> handleLogout());
-        panel.add(btnLogout, BorderLayout.EAST);
-
-        return panel;
-    }
-
-    private void handleLogout() {
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Apakah Anda yakin ingin keluar?",
-                "Konfirmasi Logout",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            this.dispose(); // Tutup window saat ini
-            new com.mbg.MainApp().setVisible(true); // Kembali ke Login
-        }
+        add(tabbedPane);
     }
 
     // ========== TAB 1: KELOLA STOK BAHAN ==========
@@ -156,9 +112,6 @@ public class gudang extends JFrame {
             }
         };
         tableStokGudang = new JTable(modelStokGudang);
-
-        styleTable(tableStokGudang);
-
         tableStokGudang.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 loadSelectedBahanToForm();
@@ -221,23 +174,32 @@ public class gudang extends JFrame {
 
         // Tombol Aksi
         JPanel panelButton = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-
-        JButton btnReset = createFlatButton("Reset Form", new Color(108, 117, 125));
-        btnReset.addActionListener(e -> resetFormBahan());
-
-        JButton btnHapus = createFlatButton("Hapus", new Color(220, 53, 69));
-        btnHapus.addActionListener(e -> hapusBahan());
-
-        JButton btnUpdate = createFlatButton("Update", new Color(0, 123, 255));
-        btnUpdate.addActionListener(e -> updateBahan());
-
-        JButton btnTambah = createFlatButton("Tambah", new Color(40, 167, 69));
+        
+        JButton btnTambah = new JButton("Tambah Bahan Baru");
+        btnTambah.setBackground(new Color(34, 139, 34));
+        btnTambah.setForeground(Color.WHITE);
+        btnTambah.setFont(new Font("SansSerif", Font.BOLD, 12));
         btnTambah.addActionListener(e -> tambahBahanBaru());
 
+        JButton btnUpdate = new JButton("Update Bahan Terpilih");
+        btnUpdate.setBackground(new Color(30, 144, 255));
+        btnUpdate.setForeground(Color.WHITE);
+        btnUpdate.setFont(new Font("SansSerif", Font.BOLD, 12));
+        btnUpdate.addActionListener(e -> updateBahan());
+
+        JButton btnHapus = new JButton("Hapus Bahan Terpilih");
+        btnHapus.setBackground(new Color(220, 20, 60));
+        btnHapus.setForeground(Color.WHITE);
+        btnHapus.setFont(new Font("SansSerif", Font.BOLD, 12));
+        btnHapus.addActionListener(e -> hapusBahan());
+
+        JButton btnReset = new JButton("Reset Form");
+        btnReset.addActionListener(e -> resetFormBahan());
+
         panelButton.add(btnReset);
-        panelButton.add(btnHapus);
-        panelButton.add(btnUpdate);
         panelButton.add(btnTambah);
+        panelButton.add(btnUpdate);
+        panelButton.add(btnHapus);
 
         panel.add(panelButton, BorderLayout.SOUTH);
 
@@ -272,13 +234,13 @@ public class gudang extends JFrame {
             txtKategori.setText(modelStokGudang.getValueAt(selectedRow, 2).toString());
             txtJumlah.setText(modelStokGudang.getValueAt(selectedRow, 3).toString());
             txtSatuan.setText(modelStokGudang.getValueAt(selectedRow, 4).toString());
-
+            
             Object tglMasuk = modelStokGudang.getValueAt(selectedRow, 5);
             txtTanggalMasuk.setText(tglMasuk != null ? tglMasuk.toString() : "");
-
+            
             Object tglKadaluarsa = modelStokGudang.getValueAt(selectedRow, 6);
             txtTanggalKadaluarsa.setText(tglKadaluarsa != null ? tglKadaluarsa.toString() : "");
-
+            
             cmbStatus.setSelectedItem(modelStokGudang.getValueAt(selectedRow, 7).toString());
         }
     }
@@ -296,12 +258,12 @@ public class gudang extends JFrame {
             bahan.setJumlah(Integer.parseInt(txtJumlah.getText().trim()));
             bahan.setSatuan(txtSatuan.getText().trim());
             bahan.setTanggalMasuk(Date.valueOf(txtTanggalMasuk.getText().trim()));
-
+            
             String kadaluarsa = txtTanggalKadaluarsa.getText().trim();
             if (!kadaluarsa.isEmpty()) {
                 bahan.setTanggalKadaluarsa(Date.valueOf(kadaluarsa));
             }
-
+            
             bahan.setStatus(cmbStatus.getSelectedItem().toString());
             bahan.setCreatedAt(new Timestamp(System.currentTimeMillis()));
 
@@ -337,12 +299,12 @@ public class gudang extends JFrame {
             bahan.setJumlah(Integer.parseInt(txtJumlah.getText().trim()));
             bahan.setSatuan(txtSatuan.getText().trim());
             bahan.setTanggalMasuk(Date.valueOf(txtTanggalMasuk.getText().trim()));
-
+            
             String kadaluarsa = txtTanggalKadaluarsa.getText().trim();
             if (!kadaluarsa.isEmpty()) {
                 bahan.setTanggalKadaluarsa(Date.valueOf(kadaluarsa));
             }
-
+            
             bahan.setStatus(cmbStatus.getSelectedItem().toString());
 
             bahanDao.update(bahan);
@@ -363,9 +325,9 @@ public class gudang extends JFrame {
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Yakin ingin menghapus bahan ini?",
-                "Konfirmasi Hapus",
+        int confirm = JOptionPane.showConfirmDialog(this, 
+                "Yakin ingin menghapus bahan ini?", 
+                "Konfirmasi Hapus", 
                 JOptionPane.YES_NO_OPTION);
 
         if (confirm == JOptionPane.YES_OPTION) {
@@ -408,7 +370,7 @@ public class gudang extends JFrame {
 
         // Panel Kiri: Tabel Permintaan
         JPanel panelKiri = new JPanel(new BorderLayout(5, 5));
-
+        
         String[] colPermintaan = {"ID", "Pemohon", "Menu Masakan", "Porsi", "Tgl Masak", "Status"};
         modelPermintaan = new DefaultTableModel(colPermintaan, 0) {
             @Override
@@ -417,11 +379,6 @@ public class gudang extends JFrame {
             }
         };
         tablePermintaan = new JTable(modelPermintaan);
-
-        // --- TERAPKAN STYLE TABEL DI SINI ---
-        styleTable(tablePermintaan);
-        // ------------------------------------
-
         tablePermintaan.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 loadDetailPermintaan();
@@ -445,13 +402,19 @@ public class gudang extends JFrame {
         txtDetailPermintaan.setFont(new Font("Monospaced", Font.PLAIN, 12));
         panelKanan.add(new JScrollPane(txtDetailPermintaan), BorderLayout.CENTER);
 
-        // Tombol Aksi (Dengan Style Flat)
+        // Tombol Aksi
         JPanel panelAksi = new JPanel(new GridLayout(2, 1, 5, 5));
-
-        JButton btnSetuju = createFlatButton("✓ Setujui Permintaan", new Color(34, 139, 34));
+        
+        JButton btnSetuju = new JButton("✓ Setujui Permintaan");
+        btnSetuju.setBackground(new Color(34, 139, 34));
+        btnSetuju.setForeground(Color.WHITE);
+        btnSetuju.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnSetuju.addActionListener(e -> prosesPermintaan("disetujui"));
 
-        JButton btnTolak = createFlatButton("✗ Tolak Permintaan", new Color(220, 53, 69));
+        JButton btnTolak = new JButton("✗ Tolak Permintaan");
+        btnTolak.setBackground(new Color(220, 20, 60));
+        btnTolak.setForeground(Color.WHITE);
+        btnTolak.setFont(new Font("SansSerif", Font.BOLD, 14));
         btnTolak.addActionListener(e -> prosesPermintaan("ditolak"));
 
         panelAksi.add(btnSetuju);
@@ -470,7 +433,7 @@ public class gudang extends JFrame {
         try {
             modelPermintaan.setRowCount(0);
             List<Permintaan> list = permintaanDao.getAll();
-
+            
             for (Permintaan p : list) {
                 String namaPemohon = "Unknown";
                 try {
@@ -506,7 +469,7 @@ public class gudang extends JFrame {
         try {
             Integer permintaanId = (Integer) modelPermintaan.getValueAt(selectedRow, 0);
             Permintaan p = permintaanDao.get(permintaanId);
-
+            
             if (p == null) {
                 txtDetailPermintaan.setText("Data permintaan tidak ditemukan.");
                 return;
@@ -535,7 +498,7 @@ public class gudang extends JFrame {
                     String namaBahan = bahan != null ? bahan.getNama() : "Unknown";
                     String satuan = bahan != null ? bahan.getSatuan() : "";
 
-                    sb.append(String.format("%-5d %-25s %-10d %-10s\n",
+                    sb.append(String.format("%-5d %-25s %-10d %-10s\n", 
                             no++, namaBahan, d.getJumlahDiminta(), satuan));
                 }
             }
@@ -566,20 +529,23 @@ public class gudang extends JFrame {
 
             String currentStatus = p.getStatus();
             if (!currentStatus.equals("menunggu")) {
-                JOptionPane.showMessageDialog(this,
+                JOptionPane.showMessageDialog(this, 
                         "Permintaan ini sudah diproses dengan status: " + currentStatus);
                 return;
             }
 
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    "Yakin ingin " + status + " permintaan ini?",
-                    "Konfirmasi",
+            int confirm = JOptionPane.showConfirmDialog(this, 
+                    "Yakin ingin " + status + " permintaan ini?", 
+                    "Konfirmasi", 
                     JOptionPane.YES_NO_OPTION);
 
             if (confirm == JOptionPane.YES_OPTION) {
                 // Update status permintaan
                 p.setStatus(status);
                 permintaanDao.update(p);
+
+                // TAMBAH: Notify observers
+                permintaanSubject.notifyObservers("PERMINTAAN_DIUPDATE", p);
 
                 // Jika disetujui, kurangi stok bahan
                 if (status.equals("disetujui")) {
@@ -588,20 +554,19 @@ public class gudang extends JFrame {
                         BahanBaku bahan = bahanDao.get(d.getBahanId());
                         if (bahan != null) {
                             int stokBaru = bahan.getJumlah() - d.getJumlahDiminta();
-                            bahan.setJumlah(Math.max(0, stokBaru)); // Tidak boleh negatif
-
-                            // Update status jika stok habis
+                            bahan.setJumlah(Math.max(0, stokBaru));
+                            
                             if (stokBaru <= 0) {
                                 bahan.setStatus("habis");
                             }
-
+                            
                             bahanDao.update(bahan);
                         }
                     }
-                    loadDataStokGudang(); // Refresh stok
+                    loadDataStokGudang();
                 }
 
-                JOptionPane.showMessageDialog(this,
+                JOptionPane.showMessageDialog(this, 
                         "Permintaan berhasil " + status + "!");
                 loadDataPermintaan();
                 txtDetailPermintaan.setText("");
@@ -613,62 +578,11 @@ public class gudang extends JFrame {
         }
     }
 
-    // --- HELPER METHOD: STYLE TABEL (ISI & HEADER RATA TENGAH + FONT 12) ---
-    private void styleTable(JTable table) {
-        // 1. Set Font & Row Height
-        table.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        table.setRowHeight(30);
-
-        // 2. Setup Renderer untuk ISI TABEL (Rata Tengah)
-        javax.swing.table.DefaultTableCellRenderer centerRenderer = new javax.swing.table.DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(javax.swing.JLabel.CENTER);
-
-        // 3. Setup Renderer untuk HEADER TABEL (Rata Tengah + Bold)
-        javax.swing.table.DefaultTableCellRenderer headerRenderer = new javax.swing.table.DefaultTableCellRenderer() {
-            @Override
-            public java.awt.Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-
-                // Set Style Header
-                setFont(new Font("SansSerif", Font.BOLD, 12));
-                setHorizontalAlignment(javax.swing.JLabel.CENTER);
-                setBackground(new Color(230, 230, 230));
-                setForeground(Color.BLACK);
-                setBorder(javax.swing.UIManager.getBorder("TableHeader.cellBorder"));
-
-                return this;
-            }
-        };
-
-        // 4. Terapkan Renderer ke Setiap Kolom
-        for (int i = 0; i < table.getColumnCount(); i++) {
-            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
-            table.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
+    @Override
+    public void dispose() {
+        if (permintaanSubject != null) {
+            permintaanSubject.detach(this);
         }
-    }
-
-    // --- HELPER METHOD: CREATE FLAT BUTTON ---
-    private JButton createFlatButton(String text, Color bgColor) {
-        JButton btn = new JButton(text);
-        btn.setPreferredSize(new Dimension(120, 35));
-        btn.setBackground(bgColor);
-        btn.setForeground(Color.WHITE);
-        btn.setFont(new Font("SansSerif", Font.BOLD, 14));
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setOpaque(true);
-        btn.setContentAreaFilled(true);
-
-        // Hover Effect
-        btn.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                btn.setBackground(bgColor.darker());
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                btn.setBackground(bgColor);
-            }
-        });
-
-        return btn;
+        super.dispose();
     }
 }
