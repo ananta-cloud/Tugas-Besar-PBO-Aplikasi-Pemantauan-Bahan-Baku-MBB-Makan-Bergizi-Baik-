@@ -1,75 +1,72 @@
 package com.codeway.daoTemplate.utils;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream; // Tambahan import
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Map;
-/**
-*
-* @author Abhishek Pandey
-*          <br>
-*         Copyright (c) Abhishek Pandey
-*         <br><br>
-*         Licensed under the Apache License, Version 2.0 (the "License");
-*         you may not use this file except in compliance with the License.
-*         You may obtain a copy of the License at
-*         <br><br>
-*         http://www.apache.org/licenses/LICENSE-2.0
-*         <br><br>
-*         Unless required by applicable law or agreed to in writing, software
-*         distributed under the License is distributed on an "AS IS" BASIS,
-*         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*         See the License for the specific language governing permissions and
-*         limitations under the License.
-*/
-public class TemplateConfiguration{
 
-	private static Map<String, String> map;
-	
+public class TemplateConfiguration {
 
-	public static String getString(String key) throws Exception{
-		if(map ==null) loadProperties();
-		return map.get(key);
-	}
-	
-	public static boolean getBoolean(String key) {
-		try{
-			String val = getString(key); 
-			return val !=null && val.equalsIgnoreCase("true");
-		}catch(Exception e){
-			e.printStackTrace();
-			return false;
-		}
-	}
+    private static Map<String, String> map;
+
+    public static String getString(String key) throws Exception {
+        if (map == null) loadProperties();
+        return map.get(key);
+    }
+
+    public static boolean getBoolean(String key) {
+        try {
+            String val = getString(key);
+            return val != null && val.equalsIgnoreCase("true");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
     public static void loadProperties() throws Exception {
         map = new HashMap<>();
-        InputStream is = TemplateConfiguration.class.getClassLoader().getResourceAsStream("template-dao.properties");
+        InputStream is = null;
+
+        // 1. Coba load dari Classpath (Standar Production/JAR)
+        is = Thread.currentThread().getContextClassLoader().getResourceAsStream("template-dao.properties");
+
+        // 2. Coba load dari Classpath root (Fallback)
+        if (is == null) {
+            is = TemplateConfiguration.class.getResourceAsStream("/template-dao.properties");
+        }
+
+        // 3. Coba load langsung dari File System (Standar Development/IDE)
+        // Ini akan mencari file di folder proyek Anda secara langsung
+        if (is == null) {
+            try {
+                is = new FileInputStream("src/main/resources/template-dao.properties");
+                System.out.println("[INFO] TemplateConfiguration: Loaded from src/main/resources (File System)");
+            } catch (Exception e) {
+                // Ignore, lanjut ke pengecekan null di bawah
+            }
+        }
 
         if (is == null) {
-            throw new Exception("template-dao.properties file not found in class path");
+            map = null; // Reset map agar error tetap muncul jika benar-benar tidak ketemu
+            throw new Exception("CRITICAL ERROR: template-dao.properties tidak ditemukan di Classpath maupun src/main/resources.");
         }
 
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
         String line = null;
         while ((line = br.readLine()) != null) {
-            // Skip baris kosong atau tanpa tanda sama dengan
             if (line.trim().isEmpty() || !line.contains("=")) continue;
 
-            // Gunakan limit 2 agar split hanya membagi di "=" pertama
             String[] parts = line.split("=", 2);
-
             String key = parts[0].trim();
-            String value = "";
-
-            // Cek apakah ada value setelah "="
-            if (parts.length > 1) {
-                value = parts[1].trim();
-            }
+            String value = (parts.length > 1) ? parts[1].trim() : "";
 
             map.put(key, value);
         }
+
+        // Debugging: Print loaded keys (Opsional)
+        // System.out.println("Loaded config keys: " + map.keySet());
     }
-	
 }
